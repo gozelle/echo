@@ -13,8 +13,8 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/labstack/echo/v4"
+	
+	"github.com/echo"
 )
 
 // TODO: Handle TLS proxy
@@ -24,11 +24,11 @@ type (
 	ProxyConfig struct {
 		// Skipper defines a function to skip middleware.
 		Skipper Skipper
-
+		
 		// Balancer defines a load balancing technique.
 		// Required.
 		Balancer ProxyBalancer
-
+		
 		// Rewrite defines URL path rewrite rules. The values captured in asterisk can be
 		// retrieved by index e.g. $1, $2 and so on.
 		// Examples:
@@ -37,56 +37,56 @@ type (
 		// "/js/*":             "/public/javascripts/$1",
 		// "/users/*/orders/*": "/user/$1/order/$2",
 		Rewrite map[string]string
-
+		
 		// RegexRewrite defines rewrite rules using regexp.Rexexp with captures
 		// Every capture group in the values can be retrieved by index e.g. $1, $2 and so on.
 		// Example:
 		// "^/old/[0.9]+/":     "/new",
 		// "^/api/.+?/(.*)":    "/v2/$1",
 		RegexRewrite map[*regexp.Regexp]string
-
+		
 		// Context key to store selected ProxyTarget into context.
 		// Optional. Default value "target".
 		ContextKey string
-
+		
 		// To customize the transport to remote.
 		// Examples: If custom TLS certificates are required.
 		Transport http.RoundTripper
-
+		
 		// ModifyResponse defines function to modify response from ProxyTarget.
 		ModifyResponse func(*http.Response) error
 	}
-
+	
 	// ProxyTarget defines the upstream target.
 	ProxyTarget struct {
 		Name string
 		URL  *url.URL
 		Meta echo.Map
 	}
-
+	
 	// ProxyBalancer defines an interface to implement a load balancing technique.
 	ProxyBalancer interface {
 		AddTarget(*ProxyTarget) bool
 		RemoveTarget(string) bool
 		Next(echo.Context) *ProxyTarget
 	}
-
+	
 	// TargetProvider defines an interface that gives the opportunity for balancer to return custom errors when selecting target.
 	TargetProvider interface {
 		NextTarget(echo.Context) (*ProxyTarget, error)
 	}
-
+	
 	commonBalancer struct {
 		targets []*ProxyTarget
 		mutex   sync.Mutex
 	}
-
+	
 	// RandomBalancer implements a random load balancing technique.
 	randomBalancer struct {
 		commonBalancer
 		random *rand.Rand
 	}
-
+	
 	// RoundRobinBalancer implements a round-robin load balancing technique.
 	roundRobinBalancer struct {
 		commonBalancer
@@ -111,27 +111,27 @@ func proxyRaw(t *ProxyTarget, c echo.Context) http.Handler {
 			return
 		}
 		defer in.Close()
-
+		
 		out, err := net.Dial("tcp", t.URL.Host)
 		if err != nil {
 			c.Set("_error", echo.NewHTTPError(http.StatusBadGateway, fmt.Sprintf("proxy raw, dial error=%v, url=%s", t.URL, err)))
 			return
 		}
 		defer out.Close()
-
+		
 		// Write header
 		err = r.Write(out)
 		if err != nil {
 			c.Set("_error", echo.NewHTTPError(http.StatusBadGateway, fmt.Sprintf("proxy raw, request header copy error=%v, url=%s", t.URL, err)))
 			return
 		}
-
+		
 		errCh := make(chan error, 2)
 		cp := func(dst io.Writer, src io.Reader) {
 			_, err = io.Copy(dst, src)
 			errCh <- err
 		}
-
+		
 		go cp(out, in)
 		go cp(in, out)
 		err = <-errCh
@@ -239,7 +239,7 @@ func ProxyWithConfig(config ProxyConfig) echo.MiddlewareFunc {
 	if config.Balancer == nil {
 		panic("echo: proxy middleware requires balancer")
 	}
-
+	
 	if config.Rewrite != nil {
 		if config.RegexRewrite == nil {
 			config.RegexRewrite = make(map[*regexp.Regexp]string)
@@ -248,17 +248,17 @@ func ProxyWithConfig(config ProxyConfig) echo.MiddlewareFunc {
 			config.RegexRewrite[k] = v
 		}
 	}
-
+	
 	provider, isTargetProvider := config.Balancer.(TargetProvider)
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) (err error) {
 			if config.Skipper(c) {
 				return next(c)
 			}
-
+			
 			req := c.Request()
 			res := c.Response()
-
+			
 			var tgt *ProxyTarget
 			if isTargetProvider {
 				tgt, err = provider.NextTarget(c)
@@ -269,11 +269,11 @@ func ProxyWithConfig(config ProxyConfig) echo.MiddlewareFunc {
 				tgt = config.Balancer.Next(c)
 			}
 			c.Set(config.ContextKey, tgt)
-
+			
 			if err := rewriteURL(config.RegexRewrite, req); err != nil {
 				return err
 			}
-
+			
 			// Fix header
 			// Basically it's not good practice to unconditionally pass incoming x-real-ip header to upstream.
 			// However, for backward compatibility, legacy behavior is preserved unless you configure Echo#IPExtractor.
@@ -286,7 +286,7 @@ func ProxyWithConfig(config ProxyConfig) echo.MiddlewareFunc {
 			if c.IsWebSocket() && req.Header.Get(echo.HeaderXForwardedFor) == "" { // For HTTP, it is automatically set by Go HTTP reverse proxy.
 				req.Header.Set(echo.HeaderXForwardedFor, c.RealIP())
 			}
-
+			
 			// Proxy
 			switch {
 			case c.IsWebSocket():
@@ -298,7 +298,7 @@ func ProxyWithConfig(config ProxyConfig) echo.MiddlewareFunc {
 			if e, ok := c.Get("_error").(error); ok {
 				err = e
 			}
-
+			
 			return
 		}
 	}

@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	"github.com/labstack/echo/v4"
+	
+	"github.com/echo"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -25,12 +25,12 @@ func TestBasicAuth(t *testing.T) {
 	h := BasicAuth(f)(func(c echo.Context) error {
 		return c.String(http.StatusOK, "test")
 	})
-
+	
 	// Valid credentials
 	auth := basic + " " + base64.StdEncoding.EncodeToString([]byte("joe:secret"))
 	req.Header.Set(echo.HeaderAuthorization, auth)
 	assert.NoError(t, h(c))
-
+	
 	h = BasicAuthWithConfig(BasicAuthConfig{
 		Skipper:   nil,
 		Validator: f,
@@ -38,35 +38,35 @@ func TestBasicAuth(t *testing.T) {
 	})(func(c echo.Context) error {
 		return c.String(http.StatusOK, "test")
 	})
-
+	
 	// Valid credentials
 	auth = basic + " " + base64.StdEncoding.EncodeToString([]byte("joe:secret"))
 	req.Header.Set(echo.HeaderAuthorization, auth)
 	assert.NoError(t, h(c))
-
+	
 	// Case-insensitive header scheme
 	auth = strings.ToUpper(basic) + " " + base64.StdEncoding.EncodeToString([]byte("joe:secret"))
 	req.Header.Set(echo.HeaderAuthorization, auth)
 	assert.NoError(t, h(c))
-
+	
 	// Invalid credentials
 	auth = basic + " " + base64.StdEncoding.EncodeToString([]byte("joe:invalid-password"))
 	req.Header.Set(echo.HeaderAuthorization, auth)
 	he := h(c).(*echo.HTTPError)
 	assert.Equal(t, http.StatusUnauthorized, he.Code)
 	assert.Equal(t, basic+` realm="someRealm"`, res.Header().Get(echo.HeaderWWWAuthenticate))
-
+	
 	// Invalid base64 string
 	auth = basic + " invalidString"
 	req.Header.Set(echo.HeaderAuthorization, auth)
 	he = h(c).(*echo.HTTPError)
 	assert.Equal(t, http.StatusBadRequest, he.Code)
-
+	
 	// Missing Authorization header
 	req.Header.Del(echo.HeaderAuthorization)
 	he = h(c).(*echo.HTTPError)
 	assert.Equal(t, http.StatusUnauthorized, he.Code)
-
+	
 	// Invalid Authorization header
 	auth = base64.StdEncoding.EncodeToString([]byte("invalid"))
 	req.Header.Set(echo.HeaderAuthorization, auth)

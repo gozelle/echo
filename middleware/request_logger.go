@@ -4,8 +4,8 @@ import (
 	"errors"
 	"net/http"
 	"time"
-
-	"github.com/labstack/echo/v4"
+	
+	"github.com/echo"
 )
 
 // Example for `fmt.Printf`
@@ -100,20 +100,20 @@ import (
 type RequestLoggerConfig struct {
 	// Skipper defines a function to skip middleware.
 	Skipper Skipper
-
+	
 	// BeforeNextFunc defines a function that is called before next middleware or handler is called in chain.
 	BeforeNextFunc func(c echo.Context)
 	// LogValuesFunc defines a function that is called with values extracted by logger from request/response.
 	// Mandatory.
 	LogValuesFunc func(c echo.Context, v RequestLoggerValues) error
-
+	
 	// HandleError instructs logger to call global error handler when next middleware/handler returns an error.
 	// This is useful when you have custom error handler that can decide to use different status codes.
 	//
 	// A side-effect of calling global error handler is that now Response has been committed and sent to the client
 	// and middlewares up in chain can not change Response status code or response body.
 	HandleError bool
-
+	
 	// LogLatency instructs logger to record duration it took to execute rest of the handler chain (next(c) call).
 	LogLatency bool
 	// LogProtocol instructs logger to extract request protocol (i.e. `HTTP/1.1` or `HTTP/2`)
@@ -159,7 +159,7 @@ type RequestLoggerConfig struct {
 	// LogFormValues instructs logger to extract given list of form values from request body+URI. Note: request can
 	// contain more than one form value with same name so slice of values is been logger for each given form value name.
 	LogFormValues []string
-
+	
 	timeNow func() time.Time
 }
 
@@ -229,30 +229,30 @@ func (config RequestLoggerConfig) ToMiddleware() (echo.MiddlewareFunc, error) {
 	if config.timeNow != nil {
 		now = config.timeNow
 	}
-
+	
 	if config.LogValuesFunc == nil {
 		return nil, errors.New("missing LogValuesFunc callback function for request logger middleware")
 	}
-
+	
 	logHeaders := len(config.LogHeaders) > 0
 	headers := append([]string(nil), config.LogHeaders...)
 	for i, v := range headers {
 		headers[i] = http.CanonicalHeaderKey(v)
 	}
-
+	
 	logQueryParams := len(config.LogQueryParams) > 0
 	logFormValues := len(config.LogFormValues) > 0
-
+	
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			if config.Skipper(c) {
 				return next(c)
 			}
-
+			
 			req := c.Request()
 			res := c.Response()
 			start := now()
-
+			
 			if config.BeforeNextFunc != nil {
 				config.BeforeNextFunc(c)
 			}
@@ -260,7 +260,7 @@ func (config RequestLoggerConfig) ToMiddleware() (echo.MiddlewareFunc, error) {
 			if config.HandleError {
 				c.Error(err)
 			}
-
+			
 			v := RequestLoggerValues{
 				StartTime: start,
 			}
@@ -350,11 +350,11 @@ func (config RequestLoggerConfig) ToMiddleware() (echo.MiddlewareFunc, error) {
 					}
 				}
 			}
-
+			
 			if errOnLog := config.LogValuesFunc(c, v); errOnLog != nil {
 				return errOnLog
 			}
-
+			
 			// in case of HandleError=true we are returning the error that we already have handled with global error handler
 			// this is deliberate as this error could be useful for upstream middlewares and default global error handler
 			// will ignore that error when it bubbles up in middleware chain.

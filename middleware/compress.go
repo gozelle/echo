@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"strings"
 	"sync"
-
-	"github.com/labstack/echo/v4"
+	
+	"github.com/echo"
 )
 
 type (
@@ -17,12 +17,12 @@ type (
 	GzipConfig struct {
 		// Skipper defines a function to skip middleware.
 		Skipper Skipper
-
+		
 		// Gzip compression level.
 		// Optional. Default value -1.
 		Level int `yaml:"level"`
 	}
-
+	
 	gzipResponseWriter struct {
 		io.Writer
 		http.ResponseWriter
@@ -58,15 +58,15 @@ func GzipWithConfig(config GzipConfig) echo.MiddlewareFunc {
 	if config.Level == 0 {
 		config.Level = DefaultGzipConfig.Level
 	}
-
+	
 	pool := gzipCompressPool(config)
-
+	
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			if config.Skipper(c) {
 				return next(c)
 			}
-
+			
 			res := c.Response()
 			res.Header().Add(echo.HeaderVary, echo.HeaderAcceptEncoding)
 			if strings.Contains(c.Request().Header.Get(echo.HeaderAcceptEncoding), gzipScheme) {

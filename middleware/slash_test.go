@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/labstack/echo/v4"
+	
+	"github.com/echo"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -66,21 +66,21 @@ func TestAddTrailingSlashWithConfig(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.whenURL, func(t *testing.T) {
 			e := echo.New()
-
+			
 			mw := AddTrailingSlashWithConfig(TrailingSlashConfig{
 				RedirectCode: http.StatusMovedPermanently,
 			})
 			h := mw(func(c echo.Context) error {
 				return nil
 			})
-
+			
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(tc.whenMethod, tc.whenURL, nil)
 			c := e.NewContext(req, rec)
-
+			
 			err := h(c)
 			assert.NoError(t, err)
-
+			
 			assert.Equal(t, tc.expectPath, req.URL.Path)
 			assert.Equal(t, tc.expectLocation, rec.Header()[echo.HeaderLocation])
 			if tc.expectStatus == 0 {
@@ -119,18 +119,18 @@ func TestAddTrailingSlash(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.whenURL, func(t *testing.T) {
 			e := echo.New()
-
+			
 			h := AddTrailingSlash()(func(c echo.Context) error {
 				return nil
 			})
-
+			
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(tc.whenMethod, tc.whenURL, nil)
 			c := e.NewContext(req, rec)
-
+			
 			err := h(c)
 			assert.NoError(t, err)
-
+			
 			assert.Equal(t, tc.expectPath, req.URL.Path)
 			assert.Equal(t, []string(nil), rec.Header()[echo.HeaderLocation])
 			assert.Equal(t, http.StatusOK, rec.Code)
@@ -202,21 +202,21 @@ func TestRemoveTrailingSlashWithConfig(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.whenURL, func(t *testing.T) {
 			e := echo.New()
-
+			
 			mw := RemoveTrailingSlashWithConfig(TrailingSlashConfig{
 				RedirectCode: http.StatusMovedPermanently,
 			})
 			h := mw(func(c echo.Context) error {
 				return nil
 			})
-
+			
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(tc.whenMethod, tc.whenURL, nil)
 			c := e.NewContext(req, rec)
-
+			
 			err := h(c)
 			assert.NoError(t, err)
-
+			
 			assert.Equal(t, tc.expectPath, req.URL.Path)
 			assert.Equal(t, tc.expectLocation, rec.Header()[echo.HeaderLocation])
 			if tc.expectStatus == 0 {
@@ -258,18 +258,18 @@ func TestRemoveTrailingSlash(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.whenURL, func(t *testing.T) {
 			e := echo.New()
-
+			
 			h := RemoveTrailingSlash()(func(c echo.Context) error {
 				return nil
 			})
-
+			
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(tc.whenMethod, tc.whenURL, nil)
 			c := e.NewContext(req, rec)
-
+			
 			err := h(c)
 			assert.NoError(t, err)
-
+			
 			assert.Equal(t, tc.expectPath, req.URL.Path)
 			assert.Equal(t, []string(nil), rec.Header()[echo.HeaderLocation])
 			assert.Equal(t, http.StatusOK, rec.Code)

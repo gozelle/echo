@@ -8,8 +8,8 @@ Example:
 	import (
 	  "net/http"
 
-	  "github.com/labstack/echo/v4"
-	  "github.com/labstack/echo/v4/middleware"
+	  "github.com/echo"
+	  "github.com/echo/middleware"
 	)
 
 	// Handler
@@ -50,7 +50,7 @@ import (
 	"runtime"
 	"sync"
 	"time"
-
+	
 	"github.com/labstack/gommon/color"
 	"github.com/labstack/gommon/log"
 	"golang.org/x/crypto/acme"
@@ -72,7 +72,7 @@ type (
 		// listener address info (on which interface/port was listener binded) without having data races.
 		startupMutex sync.RWMutex
 		colorer      *color.Color
-
+		
 		// premiddleware are middlewares that are run before routing is done. In case a pre-middleware returns
 		// an error the router is not executed and the request will end up in the global error handler.
 		premiddleware []MiddlewareFunc
@@ -81,7 +81,7 @@ type (
 		router        *Router
 		routers       map[string]*Router
 		pool          sync.Pool
-
+		
 		StdLogger        *stdLog.Logger
 		Server           *http.Server
 		TLSServer        *http.Server
@@ -100,53 +100,53 @@ type (
 		Logger           Logger
 		IPExtractor      IPExtractor
 		ListenerNetwork  string
-
+		
 		// OnAddRouteHandler is called when Echo adds new route to specific host router.
 		OnAddRouteHandler func(host string, route Route, handler HandlerFunc, middleware []MiddlewareFunc)
 	}
-
+	
 	// Route contains a handler and information for matching against requests.
 	Route struct {
 		Method string `json:"method"`
 		Path   string `json:"path"`
 		Name   string `json:"name"`
 	}
-
+	
 	// HTTPError represents an error that occurred while handling a request.
 	HTTPError struct {
 		Code     int         `json:"-"`
 		Message  interface{} `json:"message"`
 		Internal error       `json:"-"` // Stores the error returned by an external dependency
 	}
-
+	
 	// MiddlewareFunc defines a function to process middleware.
 	MiddlewareFunc func(next HandlerFunc) HandlerFunc
-
+	
 	// HandlerFunc defines a function to serve HTTP requests.
 	HandlerFunc func(c Context) error
-
+	
 	// HTTPErrorHandler is a centralized HTTP error handler.
 	HTTPErrorHandler func(err error, c Context)
-
+	
 	// Validator is the interface that wraps the Validate function.
 	Validator interface {
 		Validate(i interface{}) error
 	}
-
+	
 	// JSONSerializer is the interface that encodes and decodes JSON to and from interfaces.
 	JSONSerializer interface {
 		Serialize(c Context, i interface{}, indent string) error
 		Deserialize(c Context, i interface{}) error
 	}
-
+	
 	// Renderer is the interface that wraps the Render function.
 	Renderer interface {
 		Render(io.Writer, string, interface{}, Context) error
 	}
-
+	
 	// Map defines a generic map of type `map[string]interface{}`.
 	Map map[string]interface{}
-
+	
 	// Common struct for Echo & Group.
 	common struct{}
 )
@@ -234,7 +234,7 @@ const (
 	HeaderOrigin              = "Origin"
 	HeaderCacheControl        = "Cache-Control"
 	HeaderConnection          = "Connection"
-
+	
 	// Access control
 	HeaderAccessControlRequestMethod    = "Access-Control-Request-Method"
 	HeaderAccessControlRequestHeaders   = "Access-Control-Request-Headers"
@@ -244,7 +244,7 @@ const (
 	HeaderAccessControlAllowCredentials = "Access-Control-Allow-Credentials"
 	HeaderAccessControlExposeHeaders    = "Access-Control-Expose-Headers"
 	HeaderAccessControlMaxAge           = "Access-Control-Max-Age"
-
+	
 	// Security
 	HeaderStrictTransportSecurity         = "Strict-Transport-Security"
 	HeaderXContentTypeOptions             = "X-Content-Type-Options"
@@ -331,7 +331,7 @@ var (
 	ErrLoopDetected                  = NewHTTPError(http.StatusLoopDetected)                  // HTTP 508 Loop Detected
 	ErrNotExtended                   = NewHTTPError(http.StatusNotExtended)                   // HTTP 510 Not Extended
 	ErrNetworkAuthenticationRequired = NewHTTPError(http.StatusNetworkAuthenticationRequired) // HTTP 511 Network Authentication Required
-
+	
 	ErrValidatorNotRegistered = errors.New("validator not registered")
 	ErrRendererNotRegistered  = errors.New("renderer not registered")
 	ErrInvalidRedirectCode    = errors.New("invalid redirect status code")
@@ -345,7 +345,7 @@ var (
 	NotFoundHandler = func(c Context) error {
 		return ErrNotFound
 	}
-
+	
 	MethodNotAllowedHandler = func(c Context) error {
 		// See RFC 7231 section 7.4.1: An origin server MUST generate an Allow field in a 405 (Method Not Allowed)
 		// response and MAY do so in any other response. For disabled resources an empty Allow header may be returned
@@ -416,11 +416,11 @@ func (e *Echo) Routers() map[string]*Router {
 // handler. Then the error that global error handler received will be ignored because we have already "commited" the
 // response and status code header has been sent to the client.
 func (e *Echo) DefaultHTTPErrorHandler(err error, c Context) {
-
+	
 	if c.Response().Committed {
 		return
 	}
-
+	
 	he, ok := err.(*HTTPError)
 	if ok {
 		if he.Internal != nil {
@@ -434,7 +434,7 @@ func (e *Echo) DefaultHTTPErrorHandler(err error, c Context) {
 			Message: http.StatusText(http.StatusInternalServerError),
 		}
 	}
-
+	
 	// Issue #1426
 	code := he.Code
 	message := he.Message
@@ -445,7 +445,7 @@ func (e *Echo) DefaultHTTPErrorHandler(err error, c Context) {
 			message = Map{"message": m}
 		}
 	}
-
+	
 	// Send response
 	if c.Request().Method == http.MethodHead { // Issue #608
 		err = c.NoContent(he.Code)
@@ -574,11 +574,11 @@ func (e *Echo) add(host, method, path string, handler HandlerFunc, middlewares .
 		h := applyMiddleware(handler, middlewares...)
 		return h(c)
 	})
-
+	
 	if e.OnAddRouteHandler != nil {
 		e.OnAddRouteHandler(host, *route, handler, middlewares)
 	}
-
+	
 	return route
 }
 
@@ -643,7 +643,7 @@ func (e *Echo) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	c := e.pool.Get().(*context)
 	c.Reset(r, w)
 	var h HandlerFunc
-
+	
 	if e.premiddleware == nil {
 		e.findRouter(r.Host).Find(r.Method, GetPath(r), c)
 		h = c.Handler()
@@ -657,12 +657,12 @@ func (e *Echo) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		h = applyMiddleware(h, e.premiddleware...)
 	}
-
+	
 	// Execute chain
 	if err := h(c); err != nil {
 		e.HTTPErrorHandler(err, c)
 	}
-
+	
 	// Release context
 	e.pool.Put(c)
 }
@@ -689,13 +689,13 @@ func (e *Echo) StartTLS(address string, certFile, keyFile interface{}) (err erro
 		e.startupMutex.Unlock()
 		return
 	}
-
+	
 	var key []byte
 	if key, err = filepathOrContent(keyFile); err != nil {
 		e.startupMutex.Unlock()
 		return
 	}
-
+	
 	s := e.TLSServer
 	s.TLSConfig = new(tls.Config)
 	s.TLSConfig.Certificates = make([]tls.Certificate, 1)
@@ -703,7 +703,7 @@ func (e *Echo) StartTLS(address string, certFile, keyFile interface{}) (err erro
 		e.startupMutex.Unlock()
 		return
 	}
-
+	
 	e.configureTLS(address)
 	if err := e.configureServer(s); err != nil {
 		e.startupMutex.Unlock()
@@ -731,7 +731,7 @@ func (e *Echo) StartAutoTLS(address string) error {
 	s.TLSConfig = new(tls.Config)
 	s.TLSConfig.GetCertificate = e.AutoTLSManager.GetCertificate
 	s.TLSConfig.NextProtos = append(s.TLSConfig.NextProtos, acme.ALPNProto)
-
+	
 	e.configureTLS(address)
 	if err := e.configureServer(s); err != nil {
 		e.startupMutex.Unlock()
@@ -772,11 +772,11 @@ func (e *Echo) configureServer(s *http.Server) error {
 	if e.Debug {
 		e.Logger.SetLevel(log.DEBUG)
 	}
-
+	
 	if !e.HideBanner {
 		e.colorer.Printf(banner, e.colorer.Red("v"+Version), e.colorer.Blue(website))
 	}
-
+	
 	if s.TLSConfig == nil {
 		if e.Listener == nil {
 			l, err := newListener(s.Addr, e.ListenerNetwork)
@@ -835,11 +835,11 @@ func (e *Echo) StartH2CServer(address string, h2s *http2.Server) error {
 	if e.Debug {
 		e.Logger.SetLevel(log.DEBUG)
 	}
-
+	
 	if !e.HideBanner {
 		e.colorer.Printf(banner, e.colorer.Red("v"+Version), e.colorer.Blue(website))
 	}
-
+	
 	if e.Listener == nil {
 		l, err := newListener(s.Addr, e.ListenerNetwork)
 		if err != nil {

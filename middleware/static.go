@@ -9,8 +9,8 @@ import (
 	"os"
 	"path"
 	"strings"
-
-	"github.com/labstack/echo/v4"
+	
+	"github.com/echo"
 	"github.com/labstack/gommon/bytes"
 )
 
@@ -19,30 +19,30 @@ type (
 	StaticConfig struct {
 		// Skipper defines a function to skip middleware.
 		Skipper Skipper
-
+		
 		// Root directory from where the static content is served.
 		// Required.
 		Root string `yaml:"root"`
-
+		
 		// Index file for serving a directory.
 		// Optional. Default value "index.html".
 		Index string `yaml:"index"`
-
+		
 		// Enable HTML5 mode by forwarding all not-found requests to root so that
 		// SPA (single-page application) can handle the routing.
 		// Optional. Default value false.
 		HTML5 bool `yaml:"html5"`
-
+		
 		// Enable directory browsing.
 		// Optional. Default value false.
 		Browse bool `yaml:"browse"`
-
+		
 		// Enable ignoring of the base of the URL path.
 		// Example: when assigning a static middleware to a non root path group,
 		// the filesystem path is not doubled
 		// Optional. Default value false.
 		IgnoreBase bool `yaml:"ignoreBase"`
-
+		
 		// Filesystem provides access to the static content.
 		// Optional. Defaults to http.Dir(config.Root)
 		Filesystem http.FileSystem `yaml:"-"`
@@ -154,19 +154,19 @@ func StaticWithConfig(config StaticConfig) echo.MiddlewareFunc {
 		config.Filesystem = http.Dir(config.Root)
 		config.Root = "."
 	}
-
+	
 	// Index template
 	t, tErr := template.New("index").Parse(html)
 	if tErr != nil {
 		panic(fmt.Errorf("echo: %w", tErr))
 	}
-
+	
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) (err error) {
 			if config.Skipper(c) {
 				return next(c)
 			}
-
+			
 			p := c.Request().URL.Path
 			if strings.HasSuffix(c.Path(), "*") { // When serving from a group, e.g. `/static*`.
 				p = c.Param("*")
@@ -176,7 +176,7 @@ func StaticWithConfig(config StaticConfig) echo.MiddlewareFunc {
 				return
 			}
 			name := path.Join(config.Root, path.Clean("/"+p)) // "/"+ for security
-
+			
 			if config.IgnoreBase {
 				routePath := path.Base(strings.TrimRight(c.Path(), "/*"))
 				baseURLPath := path.Base(p)
@@ -185,57 +185,57 @@ func StaticWithConfig(config StaticConfig) echo.MiddlewareFunc {
 					name = name[:i] + strings.Replace(name[i:], routePath, "", 1)
 				}
 			}
-
+			
 			file, err := config.Filesystem.Open(name)
 			if err != nil {
 				if !isIgnorableOpenFileError(err) {
 					return err
 				}
-
+				
 				// file with that path did not exist, so we continue down in middleware/handler chain, hoping that we end up in
 				// handler that is meant to handle this request
 				if err = next(c); err == nil {
 					return err
 				}
-
+				
 				var he *echo.HTTPError
 				if !(errors.As(err, &he) && config.HTML5 && he.Code == http.StatusNotFound) {
 					return err
 				}
-
+				
 				file, err = config.Filesystem.Open(path.Join(config.Root, config.Index))
 				if err != nil {
 					return err
 				}
 			}
-
+			
 			defer file.Close()
-
+			
 			info, err := file.Stat()
 			if err != nil {
 				return err
 			}
-
+			
 			if info.IsDir() {
 				index, err := config.Filesystem.Open(path.Join(name, config.Index))
 				if err != nil {
 					if config.Browse {
 						return listDir(t, name, file, c.Response())
 					}
-
+					
 					return next(c)
 				}
-
+				
 				defer index.Close()
-
+				
 				info, err = index.Stat()
 				if err != nil {
 					return err
 				}
-
+				
 				return serveFile(c, index, info)
 			}
-
+			
 			return serveFile(c, file, info)
 		}
 	}
@@ -251,7 +251,7 @@ func listDir(t *template.Template, name string, dir http.File, res *echo.Respons
 	if err != nil {
 		return
 	}
-
+	
 	// Create directory index
 	res.Header().Set(echo.HeaderContentType, echo.MIMETextHTMLCharsetUTF8)
 	data := struct {

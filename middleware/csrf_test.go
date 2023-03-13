@@ -6,8 +6,8 @@ import (
 	"net/url"
 	"strings"
 	"testing"
-
-	"github.com/labstack/echo/v4"
+	
+	"github.com/echo"
 	"github.com/labstack/gommon/random"
 	"github.com/stretchr/testify/assert"
 )
@@ -145,25 +145,25 @@ func TestCSRF_tokenExtractors(t *testing.T) {
 			expectError:      "code=400, message=missing csrf token in the query string",
 		},
 	}
-
+	
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			e := echo.New()
-
+			
 			q := make(url.Values)
 			for queryParam, values := range tc.givenQueryTokens {
 				for _, v := range values {
 					q.Add(queryParam, v)
 				}
 			}
-
+			
 			f := make(url.Values)
 			for formKey, values := range tc.givenFormTokens {
 				for _, v := range values {
 					f.Add(formKey, v)
 				}
 			}
-
+			
 			var req *http.Request
 			switch tc.givenMethod {
 			case http.MethodGet:
@@ -172,29 +172,29 @@ func TestCSRF_tokenExtractors(t *testing.T) {
 				req = httptest.NewRequest(http.MethodPost, "/?"+q.Encode(), strings.NewReader(f.Encode()))
 				req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationForm)
 			}
-
+			
 			for header, values := range tc.givenHeaderTokens {
 				for _, v := range values {
 					req.Header.Add(header, v)
 				}
 			}
-
+			
 			if tc.givenCSRFCookie != "" {
 				req.Header.Set(echo.HeaderCookie, "_csrf="+tc.givenCSRFCookie)
 			}
-
+			
 			rec := httptest.NewRecorder()
 			c := e.NewContext(req, rec)
-
+			
 			csrf := CSRFWithConfig(CSRFConfig{
 				TokenLookup: tc.whenTokenLookup,
 				CookieName:  tc.whenCookieName,
 			})
-
+			
 			h := csrf(func(c echo.Context) error {
 				return c.String(http.StatusOK, "test")
 			})
-
+			
 			err := h(c)
 			if tc.expectError != "" {
 				assert.EqualError(t, err, tc.expectError)
@@ -214,24 +214,24 @@ func TestCSRF(t *testing.T) {
 	h := csrf(func(c echo.Context) error {
 		return c.String(http.StatusOK, "test")
 	})
-
+	
 	// Generate CSRF token
 	h(c)
 	assert.Contains(t, rec.Header().Get(echo.HeaderSetCookie), "_csrf")
-
+	
 	// Without CSRF cookie
 	req = httptest.NewRequest(http.MethodPost, "/", nil)
 	rec = httptest.NewRecorder()
 	c = e.NewContext(req, rec)
 	assert.Error(t, h(c))
-
+	
 	// Empty/invalid CSRF token
 	req = httptest.NewRequest(http.MethodPost, "/", nil)
 	rec = httptest.NewRecorder()
 	c = e.NewContext(req, rec)
 	req.Header.Set(echo.HeaderXCSRFToken, "")
 	assert.Error(t, h(c))
-
+	
 	// Valid CSRF token
 	token := random.String(32)
 	req.Header.Set(echo.HeaderCookie, "_csrf="+token)
@@ -246,15 +246,15 @@ func TestCSRFSetSameSiteMode(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
-
+	
 	csrf := CSRFWithConfig(CSRFConfig{
 		CookieSameSite: http.SameSiteStrictMode,
 	})
-
+	
 	h := csrf(func(c echo.Context) error {
 		return c.String(http.StatusOK, "test")
 	})
-
+	
 	r := h(c)
 	assert.NoError(t, r)
 	assert.Regexp(t, "SameSite=Strict", rec.Header()["Set-Cookie"])
@@ -265,13 +265,13 @@ func TestCSRFWithoutSameSiteMode(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
-
+	
 	csrf := CSRFWithConfig(CSRFConfig{})
-
+	
 	h := csrf(func(c echo.Context) error {
 		return c.String(http.StatusOK, "test")
 	})
-
+	
 	r := h(c)
 	assert.NoError(t, r)
 	assert.NotRegexp(t, "SameSite=", rec.Header()["Set-Cookie"])
@@ -282,15 +282,15 @@ func TestCSRFWithSameSiteDefaultMode(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
-
+	
 	csrf := CSRFWithConfig(CSRFConfig{
 		CookieSameSite: http.SameSiteDefaultMode,
 	})
-
+	
 	h := csrf(func(c echo.Context) error {
 		return c.String(http.StatusOK, "test")
 	})
-
+	
 	r := h(c)
 	assert.NoError(t, r)
 	assert.NotRegexp(t, "SameSite=", rec.Header()["Set-Cookie"])
@@ -301,15 +301,15 @@ func TestCSRFWithSameSiteModeNone(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
-
+	
 	csrf := CSRFWithConfig(CSRFConfig{
 		CookieSameSite: http.SameSiteNoneMode,
 	})
-
+	
 	h := csrf(func(c echo.Context) error {
 		return c.String(http.StatusOK, "test")
 	})
-
+	
 	r := h(c)
 	assert.NoError(t, r)
 	assert.Regexp(t, "SameSite=None", rec.Header()["Set-Cookie"])
@@ -333,24 +333,24 @@ func TestCSRFConfig_skipper(t *testing.T) {
 			expectCookies: 1,
 		},
 	}
-
+	
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			e := echo.New()
 			req := httptest.NewRequest(http.MethodGet, "/", nil)
 			rec := httptest.NewRecorder()
 			c := e.NewContext(req, rec)
-
+			
 			csrf := CSRFWithConfig(CSRFConfig{
 				Skipper: func(c echo.Context) bool {
 					return tc.whenSkip
 				},
 			})
-
+			
 			h := csrf(func(c echo.Context) error {
 				return c.String(http.StatusOK, "test")
 			})
-
+			
 			r := h(c)
 			assert.NoError(t, r)
 			cookie := rec.Header()["Set-Cookie"]
@@ -365,18 +365,18 @@ func TestCSRFErrorHandling(t *testing.T) {
 			return echo.NewHTTPError(http.StatusTeapot, "error_handler_executed")
 		},
 	}
-
+	
 	e := echo.New()
 	e.POST("/", func(c echo.Context) error {
 		return c.String(http.StatusNotImplemented, "should not end up here")
 	})
-
+	
 	e.Use(CSRFWithConfig(cfg))
-
+	
 	req := httptest.NewRequest(http.MethodPost, "/", nil)
 	res := httptest.NewRecorder()
 	e.ServeHTTP(res, req)
-
+	
 	assert.Equal(t, http.StatusTeapot, res.Code)
 	assert.Equal(t, "{\"message\":\"error_handler_executed\"}\n", res.Body.String())
 }

@@ -5,15 +5,15 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-
-	"github.com/labstack/echo/v4"
+	
+	"github.com/echo"
 )
 
 type (
 	// Skipper defines a function to skip middleware. Returning true skips processing
 	// the middleware.
 	Skipper func(c echo.Context) bool
-
+	
 	// BeforeFunc defines a function which is executed just before the middleware.
 	BeforeFunc func(c echo.Context)
 )
@@ -52,7 +52,7 @@ func rewriteURL(rewriteRegex map[*regexp.Regexp]string, req *http.Request) error
 	if len(rewriteRegex) == 0 {
 		return nil
 	}
-
+	
 	// Depending how HTTP request is sent RequestURI could contain Scheme://Host/path or be just /path.
 	// We only want to use path part for rewriting and therefore trim prefix if it exists
 	rawURI := req.RequestURI
@@ -68,7 +68,7 @@ func rewriteURL(rewriteRegex map[*regexp.Regexp]string, req *http.Request) error
 			rawURI = strings.TrimPrefix(rawURI, prefix)
 		}
 	}
-
+	
 	for k, v := range rewriteRegex {
 		if replacer := captureTokens(k, rawURI); replacer != nil {
 			url, err := req.URL.Parse(replacer.Replace(v))
@@ -76,7 +76,7 @@ func rewriteURL(rewriteRegex map[*regexp.Regexp]string, req *http.Request) error
 				return err
 			}
 			req.URL = url
-
+			
 			return nil // rewrite only once
 		}
 	}

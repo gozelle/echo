@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/labstack/echo/v4"
+	
+	"github.com/echo"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -30,11 +30,11 @@ func TestRedirectHTTPSRedirect(t *testing.T) {
 			expectStatusCode: http.StatusOK,
 		},
 	}
-
+	
 	for _, tc := range testCases {
 		t.Run(tc.whenHost, func(t *testing.T) {
 			res := redirectTest(HTTPSRedirect, tc.whenHost, tc.whenHeader)
-
+			
 			assert.Equal(t, tc.expectStatusCode, res.Code)
 			assert.Equal(t, tc.expectLocation, res.Header().Get(echo.HeaderLocation))
 		})
@@ -75,11 +75,11 @@ func TestRedirectHTTPSWWWRedirect(t *testing.T) {
 			expectStatusCode: http.StatusOK,
 		},
 	}
-
+	
 	for _, tc := range testCases {
 		t.Run(tc.whenHost, func(t *testing.T) {
 			res := redirectTest(HTTPSWWWRedirect, tc.whenHost, tc.whenHeader)
-
+			
 			assert.Equal(t, tc.expectStatusCode, res.Code)
 			assert.Equal(t, tc.expectLocation, res.Header().Get(echo.HeaderLocation))
 		})
@@ -115,11 +115,11 @@ func TestRedirectHTTPSNonWWWRedirect(t *testing.T) {
 			expectStatusCode: http.StatusOK,
 		},
 	}
-
+	
 	for _, tc := range testCases {
 		t.Run(tc.whenHost, func(t *testing.T) {
 			res := redirectTest(HTTPSNonWWWRedirect, tc.whenHost, tc.whenHeader)
-
+			
 			assert.Equal(t, tc.expectStatusCode, res.Code)
 			assert.Equal(t, tc.expectLocation, res.Header().Get(echo.HeaderLocation))
 		})
@@ -160,11 +160,11 @@ func TestRedirectWWWRedirect(t *testing.T) {
 			expectStatusCode: http.StatusOK,
 		},
 	}
-
+	
 	for _, tc := range testCases {
 		t.Run(tc.whenHost, func(t *testing.T) {
 			res := redirectTest(WWWRedirect, tc.whenHost, tc.whenHeader)
-
+			
 			assert.Equal(t, tc.expectStatusCode, res.Code)
 			assert.Equal(t, tc.expectLocation, res.Header().Get(echo.HeaderLocation))
 		})
@@ -200,11 +200,11 @@ func TestRedirectNonWWWRedirect(t *testing.T) {
 			expectStatusCode: http.StatusOK,
 		},
 	}
-
+	
 	for _, tc := range testCases {
 		t.Run(tc.whenHost, func(t *testing.T) {
 			res := redirectTest(NonWWWRedirect, tc.whenHost, tc.whenHeader)
-
+			
 			assert.Equal(t, tc.expectStatusCode, res.Code)
 			assert.Equal(t, tc.expectLocation, res.Header().Get(echo.HeaderLocation))
 		})
@@ -244,7 +244,7 @@ func TestNonWWWRedirectWithConfig(t *testing.T) {
 			expectStatusCode: http.StatusSeeOther,
 		},
 	}
-
+	
 	for _, tc := range testCases {
 		t.Run(tc.whenHost, func(t *testing.T) {
 			middleware := func() echo.MiddlewareFunc {
@@ -254,7 +254,7 @@ func TestNonWWWRedirectWithConfig(t *testing.T) {
 				})
 			}
 			res := redirectTest(middleware, tc.whenHost, tc.whenHeader)
-
+			
 			assert.Equal(t, tc.expectStatusCode, res.Code)
 			assert.Equal(t, tc.expectLocation, res.Header().Get(echo.HeaderLocation))
 		})
@@ -273,8 +273,8 @@ func redirectTest(fn middlewareGenerator, host string, header http.Header) *http
 	}
 	res := httptest.NewRecorder()
 	c := e.NewContext(req, res)
-
+	
 	fn()(next)(c)
-
+	
 	return res
 }

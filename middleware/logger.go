@@ -8,8 +8,8 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/labstack/echo/v4"
+	
+	"github.com/echo"
 	"github.com/labstack/gommon/color"
 	"github.com/valyala/fasttemplate"
 )
@@ -19,7 +19,7 @@ type (
 	LoggerConfig struct {
 		// Skipper defines a function to skip middleware.
 		Skipper Skipper
-
+		
 		// Tags to construct the logger format.
 		//
 		// - time_unix
@@ -54,19 +54,19 @@ type (
 		//
 		// Optional. Default value DefaultLoggerConfig.Format.
 		Format string `yaml:"format"`
-
+		
 		// Optional. Default value DefaultLoggerConfig.CustomTimeFormat.
 		CustomTimeFormat string `yaml:"custom_time_format"`
-
+		
 		// CustomTagFunc is function called for `${custom}` tag to output user implemented text by writing it to buf.
 		// Make sure that outputted text creates valid JSON string with other logged tags.
 		// Optional.
 		CustomTagFunc func(c echo.Context, buf *bytes.Buffer) (int, error)
-
+		
 		// Output is a writer where logs in JSON format are written.
 		// Optional. Default value os.Stdout.
 		Output io.Writer
-
+		
 		template *fasttemplate.Template
 		colorer  *color.Color
 		pool     *sync.Pool
@@ -104,7 +104,7 @@ func LoggerWithConfig(config LoggerConfig) echo.MiddlewareFunc {
 	if config.Output == nil {
 		config.Output = DefaultLoggerConfig.Output
 	}
-
+	
 	config.template = fasttemplate.New(config.Format, "${", "}")
 	config.colorer = color.New()
 	config.colorer.SetOutput(config.Output)
@@ -113,13 +113,13 @@ func LoggerWithConfig(config LoggerConfig) echo.MiddlewareFunc {
 			return bytes.NewBuffer(make([]byte, 256))
 		},
 	}
-
+	
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) (err error) {
 			if config.Skipper(c) {
 				return next(c)
 			}
-
+			
 			req := c.Request()
 			res := c.Response()
 			start := time.Now()
@@ -130,7 +130,7 @@ func LoggerWithConfig(config LoggerConfig) echo.MiddlewareFunc {
 			buf := config.pool.Get().(*bytes.Buffer)
 			buf.Reset()
 			defer config.pool.Put(buf)
-
+			
 			if _, err = config.template.ExecuteFunc(buf, func(w io.Writer, tag string) (int, error) {
 				switch tag {
 				case "custom":
@@ -233,7 +233,7 @@ func LoggerWithConfig(config LoggerConfig) echo.MiddlewareFunc {
 			}); err != nil {
 				return
 			}
-
+			
 			if config.Output == nil {
 				_, err = c.Logger().Output().Write(buf.Bytes())
 				return

@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"github.com/labstack/echo/v4"
+	"github.com/echo"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
@@ -14,7 +14,7 @@ import (
 
 func TestRequestLoggerWithConfig(t *testing.T) {
 	e := echo.New()
-
+	
 	var expect RequestLoggerValues
 	e.Use(RequestLoggerWithConfig(RequestLoggerConfig{
 		LogRoutePath: true,
@@ -24,16 +24,16 @@ func TestRequestLoggerWithConfig(t *testing.T) {
 			return nil
 		},
 	}))
-
+	
 	e.GET("/test", func(c echo.Context) error {
 		return c.String(http.StatusTeapot, "OK")
 	})
-
+	
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	rec := httptest.NewRecorder()
-
+	
 	e.ServeHTTP(rec, req)
-
+	
 	assert.Equal(t, http.StatusTeapot, rec.Code)
 	assert.Equal(t, "/test", expect.RoutePath)
 }
@@ -48,7 +48,7 @@ func TestRequestLoggerWithConfig_missingOnLogValuesPanics(t *testing.T) {
 
 func TestRequestLogger_skipper(t *testing.T) {
 	e := echo.New()
-
+	
 	loggerCalled := false
 	e.Use(RequestLoggerWithConfig(RequestLoggerConfig{
 		Skipper: func(c echo.Context) bool {
@@ -59,23 +59,23 @@ func TestRequestLogger_skipper(t *testing.T) {
 			return nil
 		},
 	}))
-
+	
 	e.GET("/test", func(c echo.Context) error {
 		return c.String(http.StatusTeapot, "OK")
 	})
-
+	
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	rec := httptest.NewRecorder()
-
+	
 	e.ServeHTTP(rec, req)
-
+	
 	assert.Equal(t, http.StatusTeapot, rec.Code)
 	assert.False(t, loggerCalled)
 }
 
 func TestRequestLogger_beforeNextFunc(t *testing.T) {
 	e := echo.New()
-
+	
 	var myLoggerInstance int
 	e.Use(RequestLoggerWithConfig(RequestLoggerConfig{
 		BeforeNextFunc: func(c echo.Context) {
@@ -86,23 +86,23 @@ func TestRequestLogger_beforeNextFunc(t *testing.T) {
 			return nil
 		},
 	}))
-
+	
 	e.GET("/test", func(c echo.Context) error {
 		return c.String(http.StatusTeapot, "OK")
 	})
-
+	
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	rec := httptest.NewRecorder()
-
+	
 	e.ServeHTTP(rec, req)
-
+	
 	assert.Equal(t, http.StatusTeapot, rec.Code)
 	assert.Equal(t, 42, myLoggerInstance)
 }
 
 func TestRequestLogger_logError(t *testing.T) {
 	e := echo.New()
-
+	
 	var actual RequestLoggerValues
 	e.Use(RequestLoggerWithConfig(RequestLoggerConfig{
 		LogError:  true,
@@ -112,16 +112,16 @@ func TestRequestLogger_logError(t *testing.T) {
 			return nil
 		},
 	}))
-
+	
 	e.GET("/test", func(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusNotAcceptable, "nope")
 	})
-
+	
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	rec := httptest.NewRecorder()
-
+	
 	e.ServeHTTP(rec, req)
-
+	
 	assert.Equal(t, http.StatusNotAcceptable, rec.Code)
 	assert.Equal(t, http.StatusNotAcceptable, actual.Status)
 	assert.EqualError(t, actual.Error, "code=406, message=nope")
@@ -129,7 +129,7 @@ func TestRequestLogger_logError(t *testing.T) {
 
 func TestRequestLogger_HandleError(t *testing.T) {
 	e := echo.New()
-
+	
 	var actual RequestLoggerValues
 	e.Use(RequestLoggerWithConfig(RequestLoggerConfig{
 		timeNow: func() time.Time {
@@ -143,7 +143,7 @@ func TestRequestLogger_HandleError(t *testing.T) {
 			return nil
 		},
 	}))
-
+	
 	// to see if "HandleError" works we create custom error handler that uses its own status codes
 	e.HTTPErrorHandler = func(err error, c echo.Context) {
 		if c.Response().Committed {
@@ -151,18 +151,18 @@ func TestRequestLogger_HandleError(t *testing.T) {
 		}
 		c.JSON(http.StatusTeapot, "custom error handler")
 	}
-
+	
 	e.GET("/test", func(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusForbidden, "nope")
 	})
-
+	
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	rec := httptest.NewRecorder()
-
+	
 	e.ServeHTTP(rec, req)
-
+	
 	assert.Equal(t, http.StatusTeapot, rec.Code)
-
+	
 	expect := RequestLoggerValues{
 		StartTime: time.Unix(1631045377, 0).UTC(),
 		Status:    http.StatusTeapot,
@@ -173,7 +173,7 @@ func TestRequestLogger_HandleError(t *testing.T) {
 
 func TestRequestLogger_LogValuesFuncError(t *testing.T) {
 	e := echo.New()
-
+	
 	var expect RequestLoggerValues
 	e.Use(RequestLoggerWithConfig(RequestLoggerConfig{
 		LogError:  true,
@@ -183,16 +183,16 @@ func TestRequestLogger_LogValuesFuncError(t *testing.T) {
 			return echo.NewHTTPError(http.StatusNotAcceptable, "LogValuesFuncError")
 		},
 	}))
-
+	
 	e.GET("/test", func(c echo.Context) error {
 		return c.String(http.StatusTeapot, "OK")
 	})
-
+	
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	rec := httptest.NewRecorder()
-
+	
 	e.ServeHTTP(rec, req)
-
+	
 	// NOTE: when global error handler received error returned from middleware the status has already
 	// been written to the client and response has been "commited" therefore global error handler does not do anything
 	// and error that bubbled up in middleware chain will not be reflected in response code.
@@ -217,11 +217,11 @@ func TestRequestLogger_ID(t *testing.T) {
 			expect:          "321",
 		},
 	}
-
+	
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			e := echo.New()
-
+			
 			var expect RequestLoggerValues
 			e.Use(RequestLoggerWithConfig(RequestLoggerConfig{
 				LogRequestID: true,
@@ -230,20 +230,20 @@ func TestRequestLogger_ID(t *testing.T) {
 					return nil
 				},
 			}))
-
+			
 			e.GET("/test", func(c echo.Context) error {
 				c.Response().Header().Set(echo.HeaderXRequestID, "321")
 				return c.String(http.StatusTeapot, "OK")
 			})
-
+			
 			req := httptest.NewRequest(http.MethodGet, "/test", nil)
 			if tc.whenFromRequest {
 				req.Header.Set(echo.HeaderXRequestID, "123")
 			}
 			rec := httptest.NewRecorder()
-
+			
 			e.ServeHTTP(rec, req)
-
+			
 			assert.Equal(t, http.StatusTeapot, rec.Code)
 			assert.Equal(t, tc.expect, expect.RequestID)
 		})
@@ -252,7 +252,7 @@ func TestRequestLogger_ID(t *testing.T) {
 
 func TestRequestLogger_headerIsCaseInsensitive(t *testing.T) {
 	e := echo.New()
-
+	
 	var expect RequestLoggerValues
 	mw := RequestLoggerWithConfig(RequestLoggerConfig{
 		LogValuesFunc: func(c echo.Context, values RequestLoggerValues) error {
@@ -265,15 +265,15 @@ func TestRequestLogger_headerIsCaseInsensitive(t *testing.T) {
 		c.FormValue("to force parse form")
 		return c.String(http.StatusTeapot, "OK")
 	})
-
+	
 	req := httptest.NewRequest(http.MethodGet, "/test?lang=en&checked=1&checked=2", nil)
 	req.Header.Set("referer", "https://echo.labstack.com/")
-
+	
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
-
+	
 	err := mw(c)
-
+	
 	assert.NoError(t, err)
 	assert.Len(t, expect.Headers, 1)
 	assert.Equal(t, []string{"https://echo.labstack.com/"}, expect.Headers["Referer"])
@@ -281,7 +281,7 @@ func TestRequestLogger_headerIsCaseInsensitive(t *testing.T) {
 
 func TestRequestLogger_allFields(t *testing.T) {
 	e := echo.New()
-
+	
 	isFirstNowCall := true
 	var expect RequestLoggerValues
 	mw := RequestLoggerWithConfig(RequestLoggerConfig{
@@ -319,7 +319,7 @@ func TestRequestLogger_allFields(t *testing.T) {
 		c.FormValue("to force parse form")
 		return c.String(http.StatusTeapot, "OK")
 	})
-
+	
 	f := make(url.Values)
 	f.Set("csrf", "token")
 	f.Set("multiple", "1")
@@ -331,14 +331,14 @@ func TestRequestLogger_allFields(t *testing.T) {
 	req.Header.Set(echo.HeaderContentLength, strconv.Itoa(int(reader.Size())))
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationForm)
 	req.Header.Set(echo.HeaderXRealIP, "8.8.8.8")
-
+	
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
-
+	
 	c.SetPath("/test*")
-
+	
 	err := mw(c)
-
+	
 	assert.NoError(t, err)
 	assert.Equal(t, time.Unix(1631045377, 0), expect.StartTime)
 	assert.Equal(t, 10*time.Second, expect.Latency)
@@ -356,14 +356,14 @@ func TestRequestLogger_allFields(t *testing.T) {
 	assert.Equal(t, nil, expect.Error)
 	assert.Equal(t, "32", expect.ContentLength)
 	assert.Equal(t, int64(2), expect.ResponseSize)
-
+	
 	assert.Len(t, expect.Headers, 1)
 	assert.Equal(t, []string{"curl/7.68.0"}, expect.Headers["User-Agent"])
-
+	
 	assert.Len(t, expect.QueryParams, 2)
 	assert.Equal(t, []string{"en"}, expect.QueryParams["lang"])
 	assert.Equal(t, []string{"1", "2"}, expect.QueryParams["checked"])
-
+	
 	assert.Len(t, expect.FormValues, 2)
 	assert.Equal(t, []string{"token"}, expect.FormValues["csrf"])
 	assert.Equal(t, []string{"1", "2"}, expect.FormValues["multiple"])
@@ -371,7 +371,7 @@ func TestRequestLogger_allFields(t *testing.T) {
 
 func BenchmarkRequestLogger_withoutMapFields(b *testing.B) {
 	e := echo.New()
-
+	
 	mw := RequestLoggerWithConfig(RequestLoggerConfig{
 		Skipper: nil,
 		LogValuesFunc: func(c echo.Context, values RequestLoggerValues) error {
@@ -396,14 +396,14 @@ func BenchmarkRequestLogger_withoutMapFields(b *testing.B) {
 		c.Request().Header.Set(echo.HeaderXRequestID, "123")
 		return c.String(http.StatusTeapot, "OK")
 	})
-
+	
 	req := httptest.NewRequest(http.MethodGet, "/test?lang=en", nil)
 	req.Header.Set("Referer", "https://echo.labstack.com/")
 	req.Header.Set("User-Agent", "curl/7.68.0")
-
+	
 	b.ReportAllocs()
 	b.ResetTimer()
-
+	
 	for i := 0; i < b.N; i++ {
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
@@ -413,7 +413,7 @@ func BenchmarkRequestLogger_withoutMapFields(b *testing.B) {
 
 func BenchmarkRequestLogger_withMapFields(b *testing.B) {
 	e := echo.New()
-
+	
 	mw := RequestLoggerWithConfig(RequestLoggerConfig{
 		LogValuesFunc: func(c echo.Context, values RequestLoggerValues) error {
 			return nil
@@ -441,7 +441,7 @@ func BenchmarkRequestLogger_withMapFields(b *testing.B) {
 		c.FormValue("to force parse form")
 		return c.String(http.StatusTeapot, "OK")
 	})
-
+	
 	f := make(url.Values)
 	f.Set("csrf", "token")
 	f.Add("multiple", "1")
@@ -450,10 +450,10 @@ func BenchmarkRequestLogger_withMapFields(b *testing.B) {
 	req.Header.Set("Referer", "https://echo.labstack.com/")
 	req.Header.Set("User-Agent", "curl/7.68.0")
 	req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationForm)
-
+	
 	b.ReportAllocs()
 	b.ResetTimer()
-
+	
 	for i := 0; i < b.N; i++ {
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)

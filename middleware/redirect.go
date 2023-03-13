@@ -3,15 +3,15 @@ package middleware
 import (
 	"net/http"
 	"strings"
-
-	"github.com/labstack/echo/v4"
+	
+	"github.com/echo"
 )
 
 // RedirectConfig defines the config for Redirect middleware.
 type RedirectConfig struct {
 	// Skipper defines a function to skip middleware.
 	Skipper
-
+	
 	// Status code to be used when redirecting the request.
 	// Optional. Default value http.StatusMovedPermanently.
 	Code int `yaml:"code"`
@@ -133,19 +133,19 @@ func redirect(config RedirectConfig, cb redirectLogic) echo.MiddlewareFunc {
 	if config.Code == 0 {
 		config.Code = DefaultRedirectConfig.Code
 	}
-
+	
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			if config.Skipper(c) {
 				return next(c)
 			}
-
+			
 			req, scheme := c.Request(), c.Scheme()
 			host := req.Host
 			if ok, url := cb(scheme, host, req.RequestURI); ok {
 				return c.Redirect(config.Code, url)
 			}
-
+			
 			return next(c)
 		}
 	}

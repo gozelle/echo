@@ -2,8 +2,8 @@ package middleware
 
 import (
 	"strings"
-
-	"github.com/labstack/echo/v4"
+	
+	"github.com/echo"
 )
 
 type (
@@ -11,7 +11,7 @@ type (
 	TrailingSlashConfig struct {
 		// Skipper defines a function to skip middleware.
 		Skipper Skipper
-
+		
 		// Status code to be used when redirecting the request.
 		// Optional, but when provided the request is redirected using this code.
 		RedirectCode int `yaml:"redirect_code"`
@@ -40,13 +40,13 @@ func AddTrailingSlashWithConfig(config TrailingSlashConfig) echo.MiddlewareFunc 
 	if config.Skipper == nil {
 		config.Skipper = DefaultTrailingSlashConfig.Skipper
 	}
-
+	
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			if config.Skipper(c) {
 				return next(c)
 			}
-
+			
 			req := c.Request()
 			url := req.URL
 			path := url.Path
@@ -57,12 +57,12 @@ func AddTrailingSlashWithConfig(config TrailingSlashConfig) echo.MiddlewareFunc 
 				if qs != "" {
 					uri += "?" + qs
 				}
-
+				
 				// Redirect
 				if config.RedirectCode != 0 {
 					return c.Redirect(config.RedirectCode, sanitizeURI(uri))
 				}
-
+				
 				// Forward
 				req.RequestURI = uri
 				url.Path = path
@@ -87,13 +87,13 @@ func RemoveTrailingSlashWithConfig(config TrailingSlashConfig) echo.MiddlewareFu
 	if config.Skipper == nil {
 		config.Skipper = DefaultTrailingSlashConfig.Skipper
 	}
-
+	
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			if config.Skipper(c) {
 				return next(c)
 			}
-
+			
 			req := c.Request()
 			url := req.URL
 			path := url.Path
@@ -105,12 +105,12 @@ func RemoveTrailingSlashWithConfig(config TrailingSlashConfig) echo.MiddlewareFu
 				if qs != "" {
 					uri += "?" + qs
 				}
-
+				
 				// Redirect
 				if config.RedirectCode != 0 {
 					return c.Redirect(config.RedirectCode, sanitizeURI(uri))
 				}
-
+				
 				// Forward
 				req.RequestURI = uri
 				url.Path = path

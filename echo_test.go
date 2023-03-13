@@ -16,7 +16,7 @@ import (
 	"strings"
 	"testing"
 	"time"
-
+	
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/http2"
@@ -57,10 +57,10 @@ func TestEcho(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
-
+	
 	// Router
 	assert.NotNil(t, e.Router())
-
+	
 	// DefaultHTTPErrorHandler
 	e.DefaultHTTPErrorHandler(errors.New("error"), c)
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
@@ -192,7 +192,7 @@ func TestEchoStatic(t *testing.T) {
 			expectBodyStartsWith: "{\"message\":\"Not Found\"}\n",
 		},
 	}
-
+	
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			e := New()
@@ -207,7 +207,7 @@ func TestEchoStatic(t *testing.T) {
 			} else {
 				assert.Equal(t, "", body)
 			}
-
+			
 			if tc.expectHeaderLocation != "" {
 				assert.Equal(t, tc.expectHeaderLocation, rec.Result().Header["Location"][0])
 			} else {
@@ -220,19 +220,19 @@ func TestEchoStatic(t *testing.T) {
 
 func TestEchoStaticRedirectIndex(t *testing.T) {
 	e := New()
-
+	
 	// HandlerFunc
 	e.Static("/static", "_fixture")
-
+	
 	errCh := make(chan error)
-
+	
 	go func() {
 		errCh <- e.Start(":0")
 	}()
-
+	
 	err := waitForServerStart(e, errCh, false)
 	assert.NoError(t, err)
-
+	
 	addr := e.ListenerAddr().String()
 	if resp, err := http.Get("http://" + addr + "/static"); err == nil { // http.Get follows redirects by default
 		defer func(Body io.ReadCloser) {
@@ -242,17 +242,17 @@ func TestEchoStaticRedirectIndex(t *testing.T) {
 			}
 		}(resp.Body)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
-
+		
 		if body, err := io.ReadAll(resp.Body); err == nil {
 			assert.Equal(t, true, strings.HasPrefix(string(body), "<!doctype html>"))
 		} else {
 			assert.Fail(t, err.Error())
 		}
-
+		
 	} else {
 		assert.NoError(t, err)
 	}
-
+	
 	if err := e.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -292,15 +292,15 @@ func TestEchoFile(t *testing.T) {
 			expectStartsWith: "{\"message\":\"Not Found\"}\n",
 		},
 	}
-
+	
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			e := New() // we are using echo.defaultFS instance
 			e.File(tc.givenPath, tc.givenFile)
-
+			
 			c, b := request(http.MethodGet, tc.whenPath, e)
 			assert.Equal(t, tc.expectCode, c)
-
+			
 			if len(b) > len(tc.expectStartsWith) {
 				b = b[:len(tc.expectStartsWith)]
 			}
@@ -312,7 +312,7 @@ func TestEchoFile(t *testing.T) {
 func TestEchoMiddleware(t *testing.T) {
 	e := New()
 	buf := new(bytes.Buffer)
-
+	
 	e.Pre(func(next HandlerFunc) HandlerFunc {
 		return func(c Context) error {
 			assert.Empty(t, c.Path())
@@ -320,33 +320,33 @@ func TestEchoMiddleware(t *testing.T) {
 			return next(c)
 		}
 	})
-
+	
 	e.Use(func(next HandlerFunc) HandlerFunc {
 		return func(c Context) error {
 			buf.WriteString("1")
 			return next(c)
 		}
 	})
-
+	
 	e.Use(func(next HandlerFunc) HandlerFunc {
 		return func(c Context) error {
 			buf.WriteString("2")
 			return next(c)
 		}
 	})
-
+	
 	e.Use(func(next HandlerFunc) HandlerFunc {
 		return func(c Context) error {
 			buf.WriteString("3")
 			return next(c)
 		}
 	})
-
+	
 	// Route
 	e.GET("/", func(c Context) error {
 		return c.String(http.StatusOK, "OK")
 	})
-
+	
 	c, b := request(http.MethodGet, "/", e)
 	assert.Equal(t, "-1123", buf.String())
 	assert.Equal(t, http.StatusOK, c)
@@ -367,12 +367,12 @@ func TestEchoMiddlewareError(t *testing.T) {
 
 func TestEchoHandler(t *testing.T) {
 	e := New()
-
+	
 	// HandlerFunc
 	e.GET("/ok", func(c Context) error {
 		return c.String(http.StatusOK, "OK")
 	})
-
+	
 	c, b := request(http.MethodGet, "/ok", e)
 	assert.Equal(t, http.StatusOK, c)
 	assert.Equal(t, "OK", b)
@@ -483,13 +483,13 @@ func TestEchoURL(t *testing.T) {
 	getUser := func(Context) error { return nil }
 	getAny := func(Context) error { return nil }
 	getFile := func(Context) error { return nil }
-
+	
 	e.GET("/static/file", static)
 	e.GET("/users/:id", getUser)
 	e.GET("/documents/*", getAny)
 	g := e.Group("/group")
 	g.GET("/users/:uid/files/:fid", getFile)
-
+	
 	assert.Equal(t, "/static/file", e.URL(static))
 	assert.Equal(t, "/users/:id", e.URL(getUser))
 	assert.Equal(t, "/users/1", e.URL(getUser, "1"))
@@ -513,7 +513,7 @@ func TestEchoRoutes(t *testing.T) {
 			return c.String(http.StatusOK, "OK")
 		})
 	}
-
+	
 	if assert.Equal(t, len(routes), len(e.Routes())) {
 		for _, r := range e.Routes() {
 			found := false
@@ -547,9 +547,9 @@ func TestEchoRoutesHandleAdditionalHosts(t *testing.T) {
 	e.Add(http.MethodGet, "/api", func(c Context) error {
 		return c.String(http.StatusOK, "OK")
 	})
-
+	
 	domain2Routes := e.Routers()["domain2.router.com"].Routes()
-
+	
 	assert.Len(t, domain2Routes, len(routes))
 	for _, r := range domain2Routes {
 		found := false
@@ -581,7 +581,7 @@ func TestEchoRoutesHandleDefaultHost(t *testing.T) {
 	e.Host("subdomain.mysite.site").Add(http.MethodGet, "/api", func(c Context) error {
 		return c.String(http.StatusOK, "OK")
 	})
-
+	
 	defaultRouterRoutes := e.Routes()
 	assert.Len(t, defaultRouterRoutes, len(routes))
 	for _, r := range defaultRouterRoutes {
@@ -606,7 +606,7 @@ func TestEchoServeHTTPPathEncoding(t *testing.T) {
 	e.GET("/:id", func(c Context) error {
 		return c.String(http.StatusOK, c.Param("id"))
 	})
-
+	
 	var testCases = []struct {
 		name         string
 		whenURL      string
@@ -626,14 +626,14 @@ func TestEchoServeHTTPPathEncoding(t *testing.T) {
 			expectStatus: http.StatusOK,
 		},
 	}
-
+	
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, tc.whenURL, nil)
 			rec := httptest.NewRecorder()
-
+			
 			e.ServeHTTP(rec, req)
-
+			
 			assert.Equal(t, tc.expectStatus, rec.Code)
 			assert.Equal(t, tc.expectURL, rec.Body.String())
 		})
@@ -645,23 +645,23 @@ func TestEchoHost(t *testing.T) {
 	teapotHandler := func(c Context) error { return c.String(http.StatusTeapot, http.StatusText(http.StatusTeapot)) }
 	acceptHandler := func(c Context) error { return c.String(http.StatusAccepted, http.StatusText(http.StatusAccepted)) }
 	teapotMiddleware := MiddlewareFunc(func(next HandlerFunc) HandlerFunc { return teapotHandler })
-
+	
 	e := New()
 	e.GET("/", acceptHandler)
 	e.GET("/foo", acceptHandler)
-
+	
 	ok := e.Host("ok.com")
 	ok.GET("/", okHandler)
 	ok.GET("/foo", okHandler)
-
+	
 	teapot := e.Host("teapot.com")
 	teapot.GET("/", teapotHandler)
 	teapot.GET("/foo", teapotHandler)
-
+	
 	middle := e.Host("middleware.com", teapotMiddleware)
 	middle.GET("/", okHandler)
 	middle.GET("/foo", okHandler)
-
+	
 	var testCases = []struct {
 		name         string
 		whenHost     string
@@ -726,15 +726,15 @@ func TestEchoHost(t *testing.T) {
 			expectStatus: http.StatusTeapot,
 		},
 	}
-
+	
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, tc.whenPath, nil)
 			req.Host = tc.whenHost
 			rec := httptest.NewRecorder()
-
+			
 			e.ServeHTTP(rec, req)
-
+			
 			assert.Equal(t, tc.expectStatus, rec.Code)
 			assert.Equal(t, tc.expectBody, rec.Body.String())
 		})
@@ -753,13 +753,13 @@ func TestEchoGroup(t *testing.T) {
 	h := func(c Context) error {
 		return c.NoContent(http.StatusOK)
 	}
-
+	
 	//--------
 	// Routes
 	//--------
-
+	
 	e.GET("/users", h)
-
+	
 	// Group
 	g1 := e.Group("/group1")
 	g1.Use(func(next HandlerFunc) HandlerFunc {
@@ -769,7 +769,7 @@ func TestEchoGroup(t *testing.T) {
 		}
 	})
 	g1.GET("", h)
-
+	
 	// Nested groups with middleware
 	g2 := e.Group("/group2")
 	g2.Use(func(next HandlerFunc) HandlerFunc {
@@ -786,14 +786,14 @@ func TestEchoGroup(t *testing.T) {
 		}
 	})
 	g3.GET("", h)
-
+	
 	request(http.MethodGet, "/users", e)
 	assert.Equal(t, "0", buf.String())
-
+	
 	buf.Reset()
 	request(http.MethodGet, "/group1", e)
 	assert.Equal(t, "01", buf.String())
-
+	
 	buf.Reset()
 	request(http.MethodGet, "/group2/group3", e)
 	assert.Equal(t, "023", buf.String())
@@ -839,32 +839,32 @@ func TestEcho_RouteNotFound(t *testing.T) {
 			expectCode:  http.StatusOK,
 		},
 	}
-
+	
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			e := New()
-
+			
 			okHandler := func(c Context) error {
 				return c.String(http.StatusOK, c.Request().Method+" "+c.Path())
 			}
 			notFoundHandler := func(c Context) error {
 				return c.String(http.StatusNotFound, c.Request().Method+" "+c.Path())
 			}
-
+			
 			e.GET("/", okHandler)
 			e.GET("/a/c/df", okHandler)
 			e.GET("/a/b*", okHandler)
 			e.PUT("/*", okHandler)
-
+			
 			e.RouteNotFound("/a/c/xx", notFoundHandler)  // static
 			e.RouteNotFound("/a/:file", notFoundHandler) // param
 			e.RouteNotFound("/*", notFoundHandler)       // any
-
+			
 			req := httptest.NewRequest(http.MethodGet, tc.whenURL, nil)
 			rec := httptest.NewRecorder()
-
+			
 			e.ServeHTTP(rec, req)
-
+			
 			assert.Equal(t, tc.expectCode, rec.Code)
 			assert.Equal(t, tc.expectRoute, rec.Body.String())
 		})
@@ -873,14 +873,14 @@ func TestEcho_RouteNotFound(t *testing.T) {
 
 func TestEchoMethodNotAllowed(t *testing.T) {
 	e := New()
-
+	
 	e.GET("/", func(c Context) error {
 		return c.String(http.StatusOK, "Echo!")
 	})
 	req := httptest.NewRequest(http.MethodPost, "/", nil)
 	rec := httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
-
+	
 	assert.Equal(t, http.StatusMethodNotAllowed, rec.Code)
 	assert.Equal(t, "OPTIONS, GET", rec.Header().Get(HeaderAllow))
 }
@@ -895,10 +895,10 @@ func TestEchoContext(t *testing.T) {
 func waitForServerStart(e *Echo, errChan <-chan error, isTLS bool) error {
 	ctx, cancel := stdContext.WithTimeout(stdContext.Background(), 200*time.Millisecond)
 	defer cancel()
-
+	
 	ticker := time.NewTicker(5 * time.Millisecond)
 	defer ticker.Stop()
-
+	
 	for {
 		select {
 		case <-ctx.Done():
@@ -925,17 +925,17 @@ func waitForServerStart(e *Echo, errChan <-chan error, isTLS bool) error {
 func TestEchoStart(t *testing.T) {
 	e := New()
 	errChan := make(chan error)
-
+	
 	go func() {
 		err := e.Start(":0")
 		if err != nil {
 			errChan <- err
 		}
 	}()
-
+	
 	err := waitForServerStart(e, errChan, false)
 	assert.NoError(t, err)
-
+	
 	assert.NoError(t, e.Close())
 }
 
@@ -975,12 +975,12 @@ func TestEcho_StartTLS(t *testing.T) {
 			expectError: "listen tcp: address nope: missing port in address",
 		},
 	}
-
+	
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			e := New()
 			errChan := make(chan error)
-
+			
 			go func() {
 				certFile := "_fixture/certs/cert.pem"
 				if tc.certFile != "" {
@@ -990,13 +990,13 @@ func TestEcho_StartTLS(t *testing.T) {
 				if tc.keyFile != "" {
 					keyFile = tc.keyFile
 				}
-
+				
 				err := e.StartTLS(tc.addr, certFile, keyFile)
 				if err != nil {
 					errChan <- err
 				}
 			}()
-
+			
 			err := waitForServerStart(e, errChan, true)
 			if tc.expectError != "" {
 				if _, ok := err.(*os.PathError); ok {
@@ -1007,7 +1007,7 @@ func TestEcho_StartTLS(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
-
+			
 			assert.NoError(t, e.Close())
 		})
 	}
@@ -1019,7 +1019,7 @@ func TestEchoStartTLSAndStart(t *testing.T) {
 	e.GET("/", func(c Context) error {
 		return c.String(http.StatusOK, "OK")
 	})
-
+	
 	errTLSChan := make(chan error)
 	go func() {
 		certFile := "_fixture/certs/cert.pem"
@@ -1029,7 +1029,7 @@ func TestEchoStartTLSAndStart(t *testing.T) {
 			errTLSChan <- err
 		}
 	}()
-
+	
 	err := waitForServerStart(e, errTLSChan, true)
 	assert.NoError(t, err)
 	defer func() {
@@ -1037,7 +1037,7 @@ func TestEchoStartTLSAndStart(t *testing.T) {
 			t.Error(err)
 		}
 	}()
-
+	
 	// check if HTTPS works (note: we are using self signed certs so InsecureSkipVerify=true)
 	client := &http.Client{Transport: &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -1045,7 +1045,7 @@ func TestEchoStartTLSAndStart(t *testing.T) {
 	res, err := client.Get("https://" + e.TLSListenerAddr().String())
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, res.StatusCode)
-
+	
 	errChan := make(chan error)
 	go func() {
 		err := e.Start("localhost:")
@@ -1055,12 +1055,12 @@ func TestEchoStartTLSAndStart(t *testing.T) {
 	}()
 	err = waitForServerStart(e, errChan, false)
 	assert.NoError(t, err)
-
+	
 	// now we are serving both HTTPS and HTTP listeners. see if HTTP works in addition to HTTPS
 	res, err = http.Get("http://" + e.ListenerAddr().String())
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, res.StatusCode)
-
+	
 	// see if HTTPS works after HTTP listener is also added
 	res, err = client.Get("https://" + e.TLSListenerAddr().String())
 	assert.NoError(t, err)
@@ -1072,7 +1072,7 @@ func TestEchoStartTLSByteString(t *testing.T) {
 	require.NoError(t, err)
 	key, err := os.ReadFile("_fixture/certs/key.pem")
 	require.NoError(t, err)
-
+	
 	testCases := []struct {
 		cert        interface{}
 		key         interface{}
@@ -1110,26 +1110,26 @@ func TestEchoStartTLSByteString(t *testing.T) {
 			name:        `InvalidCertAndKeyTypes`,
 		},
 	}
-
+	
 	for _, test := range testCases {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
 			e := New()
 			e.HideBanner = true
-
+			
 			errChan := make(chan error)
-
+			
 			go func() {
 				errChan <- e.StartTLS(":0", test.cert, test.key)
 			}()
-
+			
 			err := waitForServerStart(e, errChan, true)
 			if test.expectedErr != nil {
 				assert.EqualError(t, err, test.expectedErr.Error())
 			} else {
 				assert.NoError(t, err)
 			}
-
+			
 			assert.NoError(t, e.Close())
 		})
 	}
@@ -1151,23 +1151,23 @@ func TestEcho_StartAutoTLS(t *testing.T) {
 			expectError: "listen tcp: address nope: missing port in address",
 		},
 	}
-
+	
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			e := New()
 			errChan := make(chan error)
-
+			
 			go func() {
 				errChan <- e.StartAutoTLS(tc.addr)
 			}()
-
+			
 			err := waitForServerStart(e, errChan, true)
 			if tc.expectError != "" {
 				assert.EqualError(t, err, tc.expectError)
 			} else {
 				assert.NoError(t, err)
 			}
-
+			
 			assert.NoError(t, e.Close())
 		})
 	}
@@ -1189,13 +1189,13 @@ func TestEcho_StartH2CServer(t *testing.T) {
 			expectError: "listen tcp: address nope: missing port in address",
 		},
 	}
-
+	
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			e := New()
 			e.Debug = true
 			h2s := &http2.Server{}
-
+			
 			errChan := make(chan error)
 			go func() {
 				err := e.StartH2CServer(tc.addr, h2s)
@@ -1203,14 +1203,14 @@ func TestEcho_StartH2CServer(t *testing.T) {
 					errChan <- err
 				}
 			}()
-
+			
 			err := waitForServerStart(e, errChan, false)
 			if tc.expectError != "" {
 				assert.EqualError(t, err, tc.expectError)
 			} else {
 				assert.NoError(t, err)
 			}
-
+			
 			assert.NoError(t, e.Close())
 		})
 	}
@@ -1239,10 +1239,10 @@ func TestHTTPError(t *testing.T) {
 		err := NewHTTPError(http.StatusBadRequest, map[string]interface{}{
 			"code": 12,
 		})
-
+		
 		assert.Equal(t, "code=400, message=map[code:12]", err.Error())
 	})
-
+	
 	t.Run("internal and SetInternal", func(t *testing.T) {
 		err := NewHTTPError(http.StatusBadRequest, map[string]interface{}{
 			"code": 12,
@@ -1250,7 +1250,7 @@ func TestHTTPError(t *testing.T) {
 		err.SetInternal(errors.New("internal error"))
 		assert.Equal(t, "code=400, message=map[code:12], internal=internal error", err.Error())
 	})
-
+	
 	t.Run("internal and WithInternal", func(t *testing.T) {
 		err := NewHTTPError(http.StatusBadRequest, map[string]interface{}{
 			"code": 12,
@@ -1265,10 +1265,10 @@ func TestHTTPError_Unwrap(t *testing.T) {
 		err := NewHTTPError(http.StatusBadRequest, map[string]interface{}{
 			"code": 12,
 		})
-
+		
 		assert.Nil(t, errors.Unwrap(err))
 	})
-
+	
 	t.Run("unwrap internal and SetInternal", func(t *testing.T) {
 		err := NewHTTPError(http.StatusBadRequest, map[string]interface{}{
 			"code": 12,
@@ -1276,7 +1276,7 @@ func TestHTTPError_Unwrap(t *testing.T) {
 		err.SetInternal(errors.New("internal error"))
 		assert.Equal(t, "internal error", errors.Unwrap(err).Error())
 	})
-
+	
 	t.Run("unwrap internal and WithInternal", func(t *testing.T) {
 		err := NewHTTPError(http.StatusBadRequest, map[string]interface{}{
 			"code": 12,
@@ -1313,7 +1313,7 @@ func TestDefaultHTTPErrorHandler(t *testing.T) {
 		err := errors.New("internal error message body")
 		return NewHTTPError(http.StatusBadRequest).SetInternal(err)
 	})
-
+	
 	// With Debug=true plain response contains error message
 	c, b := request(http.MethodGet, "/plain", e)
 	assert.Equal(t, http.StatusInternalServerError, c)
@@ -1334,7 +1334,7 @@ func TestDefaultHTTPErrorHandler(t *testing.T) {
 	c, b = request(http.MethodGet, "/internal-error", e)
 	assert.Equal(t, http.StatusBadRequest, c)
 	assert.Equal(t, "{\n  \"error\": \"code=400, message=Bad Request, internal=internal error message body\",\n  \"message\": \"Bad Request\"\n}\n", b)
-
+	
 	e.Debug = false
 	// With Debug=false the error response is shortened
 	c, b = request(http.MethodGet, "/plain", e)
@@ -1352,20 +1352,20 @@ func TestDefaultHTTPErrorHandler(t *testing.T) {
 func TestEchoClose(t *testing.T) {
 	e := New()
 	errCh := make(chan error)
-
+	
 	go func() {
 		errCh <- e.Start(":0")
 	}()
-
+	
 	err := waitForServerStart(e, errCh, false)
 	assert.NoError(t, err)
-
+	
 	if err := e.Close(); err != nil {
 		t.Fatal(err)
 	}
-
+	
 	assert.NoError(t, e.Close())
-
+	
 	err = <-errCh
 	assert.Equal(t, err.Error(), "http: Server closed")
 }
@@ -1373,22 +1373,22 @@ func TestEchoClose(t *testing.T) {
 func TestEchoShutdown(t *testing.T) {
 	e := New()
 	errCh := make(chan error)
-
+	
 	go func() {
 		errCh <- e.Start(":0")
 	}()
-
+	
 	err := waitForServerStart(e, errCh, false)
 	assert.NoError(t, err)
-
+	
 	if err := e.Close(); err != nil {
 		t.Fatal(err)
 	}
-
+	
 	ctx, cancel := stdContext.WithTimeout(stdContext.Background(), 10*time.Second)
 	defer cancel()
 	assert.NoError(t, e.Shutdown(ctx))
-
+	
 	err = <-errCh
 	assert.Equal(t, err.Error(), "http: Server closed")
 }
@@ -1425,21 +1425,21 @@ func TestEchoListenerNetwork(t *testing.T) {
 		t.Run(tt.test, func(t *testing.T) {
 			e := New()
 			e.ListenerNetwork = tt.network
-
+			
 			// HandlerFunc
 			e.GET("/ok", func(c Context) error {
 				return c.String(http.StatusOK, "OK")
 			})
-
+			
 			errCh := make(chan error)
-
+			
 			go func() {
 				errCh <- e.Start(tt.address)
 			}()
-
+			
 			err := waitForServerStart(e, errCh, false)
 			assert.NoError(t, err)
-
+			
 			if resp, err := http.Get(fmt.Sprintf("http://%s/ok", tt.address)); err == nil {
 				defer func(Body io.ReadCloser) {
 					err := Body.Close()
@@ -1448,17 +1448,17 @@ func TestEchoListenerNetwork(t *testing.T) {
 					}
 				}(resp.Body)
 				assert.Equal(t, http.StatusOK, resp.StatusCode)
-
+				
 				if body, err := io.ReadAll(resp.Body); err == nil {
 					assert.Equal(t, "OK", string(body))
 				} else {
 					assert.Fail(t, err.Error())
 				}
-
+				
 			} else {
 				assert.Fail(t, err.Error())
 			}
-
+			
 			if err := e.Close(); err != nil {
 				t.Fatal(err)
 			}
@@ -1469,12 +1469,12 @@ func TestEchoListenerNetwork(t *testing.T) {
 func TestEchoListenerNetworkInvalid(t *testing.T) {
 	e := New()
 	e.ListenerNetwork = "unix"
-
+	
 	// HandlerFunc
 	e.GET("/ok", func(c Context) error {
 		return c.String(http.StatusOK, "OK")
 	})
-
+	
 	assert.Equal(t, ErrInvalidListenerNetwork, e.Start(":1323"))
 }
 
@@ -1487,7 +1487,7 @@ func TestEcho_OnAddRouteHandler(t *testing.T) {
 	}
 	dummyHandler := func(Context) error { return nil }
 	e := New()
-
+	
 	added := make([]rr, 0)
 	e.OnAddRouteHandler = func(host string, route Route, handler HandlerFunc, middleware []MiddlewareFunc) {
 		added = append(added, rr{
@@ -1497,40 +1497,40 @@ func TestEcho_OnAddRouteHandler(t *testing.T) {
 			middleware: middleware,
 		})
 	}
-
+	
 	e.GET("/static", NotFoundHandler)
 	e.Host("domain.site").GET("/static/*", dummyHandler, func(next HandlerFunc) HandlerFunc {
 		return func(c Context) error {
 			return next(c)
 		}
 	})
-
+	
 	assert.Len(t, added, 2)
-
+	
 	assert.Equal(t, "", added[0].host)
-	assert.Equal(t, Route{Method: http.MethodGet, Path: "/static", Name: "github.com/labstack/echo/v4.glob..func1"}, added[0].route)
+	assert.Equal(t, Route{Method: http.MethodGet, Path: "/static", Name: "github.com/echo.glob..func1"}, added[0].route)
 	assert.Len(t, added[0].middleware, 0)
-
+	
 	assert.Equal(t, "domain.site", added[1].host)
-	assert.Equal(t, Route{Method: http.MethodGet, Path: "/static/*", Name: "github.com/labstack/echo/v4.TestEcho_OnAddRouteHandler.func1"}, added[1].route)
+	assert.Equal(t, Route{Method: http.MethodGet, Path: "/static/*", Name: "github.com/echo.TestEcho_OnAddRouteHandler.func1"}, added[1].route)
 	assert.Len(t, added[1].middleware, 1)
 }
 
 func TestEchoReverse(t *testing.T) {
 	e := New()
 	dummyHandler := func(Context) error { return nil }
-
+	
 	e.GET("/static", dummyHandler).Name = "/static"
 	e.GET("/static/*", dummyHandler).Name = "/static/*"
 	e.GET("/params/:foo", dummyHandler).Name = "/params/:foo"
 	e.GET("/params/:foo/bar/:qux", dummyHandler).Name = "/params/:foo/bar/:qux"
 	e.GET("/params/:foo/bar/:qux/*", dummyHandler).Name = "/params/:foo/bar/:qux/*"
-
+	
 	assert.Equal(t, "/static", e.Reverse("/static"))
 	assert.Equal(t, "/static", e.Reverse("/static", "missing param"))
 	assert.Equal(t, "/static/*", e.Reverse("/static/*"))
 	assert.Equal(t, "/static/foo.txt", e.Reverse("/static/*", "foo.txt"))
-
+	
 	assert.Equal(t, "/params/:foo", e.Reverse("/params/:foo"))
 	assert.Equal(t, "/params/one", e.Reverse("/params/:foo", "one"))
 	assert.Equal(t, "/params/:foo/bar/:qux", e.Reverse("/params/:foo/bar/:qux"))
@@ -1541,42 +1541,42 @@ func TestEchoReverse(t *testing.T) {
 
 func TestEchoReverseHandleHostProperly(t *testing.T) {
 	dummyHandler := func(Context) error { return nil }
-
+	
 	e := New()
-
+	
 	// routes added to the default router are different form different hosts
 	e.GET("/static", dummyHandler).Name = "default-host /static"
 	e.GET("/static/*", dummyHandler).Name = "xxx"
-
+	
 	// different host
 	h := e.Host("the_host")
 	h.GET("/static", dummyHandler).Name = "host2 /static"
 	h.GET("/static/v2/*", dummyHandler).Name = "xxx"
-
+	
 	assert.Equal(t, "/static", e.Reverse("default-host /static"))
 	// when actual route does not have params and we provide some to Reverse we should get that route url back
 	assert.Equal(t, "/static", e.Reverse("default-host /static", "missing param"))
-
+	
 	host2Router := e.Routers()["the_host"]
 	assert.Equal(t, "/static", host2Router.Reverse("host2 /static"))
 	assert.Equal(t, "/static", host2Router.Reverse("host2 /static", "missing param"))
-
+	
 	assert.Equal(t, "/static/v2/*", host2Router.Reverse("xxx"))
 	assert.Equal(t, "/static/v2/foo.txt", host2Router.Reverse("xxx", "foo.txt"))
-
+	
 }
 
 func TestEcho_ListenerAddr(t *testing.T) {
 	e := New()
-
+	
 	addr := e.ListenerAddr()
 	assert.Nil(t, addr)
-
+	
 	errCh := make(chan error)
 	go func() {
 		errCh <- e.Start(":0")
 	}()
-
+	
 	err := waitForServerStart(e, errCh, false)
 	assert.NoError(t, err)
 }
@@ -1586,17 +1586,17 @@ func TestEcho_TLSListenerAddr(t *testing.T) {
 	require.NoError(t, err)
 	key, err := os.ReadFile("_fixture/certs/key.pem")
 	require.NoError(t, err)
-
+	
 	e := New()
-
+	
 	addr := e.TLSListenerAddr()
 	assert.Nil(t, addr)
-
+	
 	errCh := make(chan error)
 	go func() {
 		errCh <- e.StartTLS(":0", cert, key)
 	}()
-
+	
 	err = waitForServerStart(e, errCh, true)
 	assert.NoError(t, err)
 }
@@ -1608,7 +1608,7 @@ func TestEcho_StartServer(t *testing.T) {
 	require.NoError(t, err)
 	certs, err := tls.X509KeyPair(cert, key)
 	require.NoError(t, err)
-
+	
 	var testCases = []struct {
 		name        string
 		addr        string
@@ -1636,23 +1636,23 @@ func TestEcho_StartServer(t *testing.T) {
 			expectError: "listen tcp: address nope: missing port in address",
 		},
 	}
-
+	
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			e := New()
 			e.Debug = true
-
+			
 			server := new(http.Server)
 			server.Addr = tc.addr
 			if tc.TLSConfig != nil {
 				server.TLSConfig = tc.TLSConfig
 			}
-
+			
 			errCh := make(chan error)
 			go func() {
 				errCh <- e.StartServer(server)
 			}()
-
+			
 			err := waitForServerStart(e, errCh, tc.TLSConfig != nil)
 			if tc.expectError != "" {
 				assert.EqualError(t, err, tc.expectError)
@@ -1669,16 +1669,16 @@ func benchmarkEchoRoutes(b *testing.B, routes []*Route) {
 	req := httptest.NewRequest("GET", "/", nil)
 	u := req.URL
 	w := httptest.NewRecorder()
-
+	
 	b.ReportAllocs()
-
+	
 	// Add routes
 	for _, route := range routes {
 		e.Add(route.Method, route.Path, func(c Context) error {
 			return nil
 		})
 	}
-
+	
 	// Find routes
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

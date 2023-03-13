@@ -4,7 +4,7 @@ package echo_test
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/labstack/echo/v4"
+	"github.com/echo"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -18,9 +18,9 @@ func ExampleValueBinder_BindErrors() {
 			IDs    []int64
 		}
 		length := int64(50) // default length is 50
-
+		
 		b := echo.QueryParamsBinder(c)
-
+		
 		errs := b.Int64("length", &length).
 			Int64s("ids", &opts.IDs).
 			Bool("active", &opts.Active).
@@ -33,18 +33,18 @@ func ExampleValueBinder_BindErrors() {
 			return fmt.Errorf("%v fields failed to bind", len(errs))
 		}
 		fmt.Printf("active = %v, length = %v, ids = %v", opts.Active, length, opts.IDs)
-
+		
 		return c.JSON(http.StatusOK, opts)
 	}
-
+	
 	e := echo.New()
 	c := e.NewContext(
 		httptest.NewRequest(http.MethodGet, "/api/endpoint?active=true&length=25&ids=1&ids=2&ids=3", nil),
 		httptest.NewRecorder(),
 	)
-
+	
 	_ = routeFunc(c)
-
+	
 	// Output: active = true, length = 25, ids = [1 2 3]
 }
 
@@ -56,10 +56,10 @@ func ExampleValueBinder_BindError() {
 			IDs    []int64
 		}
 		length := int64(50) // default length is 50
-
+		
 		// create binder that stops binding at first error
 		b := echo.QueryParamsBinder(c)
-
+		
 		err := b.Int64("length", &length).
 			Int64s("ids", &opts.IDs).
 			Bool("active", &opts.Active).
@@ -69,18 +69,18 @@ func ExampleValueBinder_BindError() {
 			return fmt.Errorf("my own custom error for field: %s values: %v", bErr.Field, bErr.Values)
 		}
 		fmt.Printf("active = %v, length = %v, ids = %v\n", opts.Active, length, opts.IDs)
-
+		
 		return c.JSON(http.StatusOK, opts)
 	}
-
+	
 	e := echo.New()
 	c := e.NewContext(
 		httptest.NewRequest(http.MethodGet, "/api/endpoint?active=true&length=25&ids=1&ids=2&ids=3", nil),
 		httptest.NewRecorder(),
 	)
-
+	
 	_ = failFastRouteFunc(c)
-
+	
 	// Output: active = true, length = 25, ids = [1 2 3]
 }
 
@@ -89,7 +89,7 @@ func ExampleValueBinder_CustomFunc() {
 	routeFunc := func(c echo.Context) error {
 		length := int64(50) // default length is 50
 		var binary []byte
-
+		
 		b := echo.QueryParamsBinder(c)
 		errs := b.Int64("length", &length).
 			CustomFunc("base64", func(values []string) []error {
@@ -106,7 +106,7 @@ func ExampleValueBinder_CustomFunc() {
 				return nil
 			}).
 			BindErrors() // returns all errors
-
+		
 		if errs != nil {
 			for _, err := range errs {
 				bErr := err.(*echo.BindingError)
@@ -115,16 +115,16 @@ func ExampleValueBinder_CustomFunc() {
 			return fmt.Errorf("%v fields failed to bind", len(errs))
 		}
 		fmt.Printf("length = %v, base64 = %s", length, binary)
-
+		
 		return c.JSON(http.StatusOK, "ok")
 	}
-
+	
 	e := echo.New()
 	c := e.NewContext(
 		httptest.NewRequest(http.MethodGet, "/api/endpoint?length=25&base64=SGVsbG8gV29ybGQ%3D", nil),
 		httptest.NewRecorder(),
 	)
 	_ = routeFunc(c)
-
+	
 	// Output: length = 25, base64 = Hello World
 }

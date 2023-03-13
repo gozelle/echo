@@ -10,8 +10,8 @@ import (
 	"strings"
 	"sync"
 	"testing"
-
-	"github.com/labstack/echo/v4"
+	
+	"github.com/echo"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -20,16 +20,16 @@ func TestDecompress(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("test"))
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
-
+	
 	// Skip if no Content-Encoding header
 	h := Decompress()(func(c echo.Context) error {
 		c.Response().Write([]byte("test")) // For Content-Type sniffing
 		return nil
 	})
 	h(c)
-
+	
 	assert.Equal(t, "test", rec.Body.String())
-
+	
 	// Decompress
 	body := `{"name": "echo"}`
 	gz, _ := gzipString(body)
@@ -49,15 +49,15 @@ func TestDecompressDefaultConfig(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader("test"))
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
-
+	
 	h := DecompressWithConfig(DecompressConfig{})(func(c echo.Context) error {
 		c.Response().Write([]byte("test")) // For Content-Type sniffing
 		return nil
 	})
 	h(c)
-
+	
 	assert.Equal(t, "test", rec.Body.String())
-
+	
 	// Decompress
 	body := `{"name": "echo"}`
 	gz, _ := gzipString(body)
@@ -173,15 +173,15 @@ func BenchmarkDecompress(b *testing.B) {
 	gz, _ := gzipString(body)
 	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(string(gz)))
 	req.Header.Set(echo.HeaderContentEncoding, GZIPEncoding)
-
+	
 	h := Decompress()(func(c echo.Context) error {
 		c.Response().Write([]byte(body)) // For Content-Type sniffing
 		return nil
 	})
-
+	
 	b.ReportAllocs()
 	b.ResetTimer()
-
+	
 	for i := 0; i < b.N; i++ {
 		// Decompress
 		rec := httptest.NewRecorder()
@@ -193,15 +193,15 @@ func BenchmarkDecompress(b *testing.B) {
 func gzipString(body string) ([]byte, error) {
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
-
+	
 	_, err := gz.Write([]byte(body))
 	if err != nil {
 		return nil, err
 	}
-
+	
 	if err := gz.Close(); err != nil {
 		return nil, err
 	}
-
+	
 	return buf.Bytes(), nil
 }

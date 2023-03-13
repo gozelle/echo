@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"sync"
 	"time"
-
-	"github.com/labstack/echo/v4"
+	
+	"github.com/echo"
 	"golang.org/x/time/rate"
 )
 
@@ -80,7 +80,7 @@ RateLimiter returns a rate limiting middleware
 func RateLimiter(store RateLimiterStore) echo.MiddlewareFunc {
 	config := DefaultRateLimiterConfig
 	config.Store = store
-
+	
 	return RateLimiterWithConfig(config)
 }
 
@@ -134,13 +134,13 @@ func RateLimiterWithConfig(config RateLimiterConfig) echo.MiddlewareFunc {
 			if config.BeforeFunc != nil {
 				config.BeforeFunc(c)
 			}
-
+			
 			identifier, err := config.IdentifierExtractor(c)
 			if err != nil {
 				c.Error(config.ErrorHandler(c, err))
 				return nil
 			}
-
+			
 			if allow, err := config.Store.Allow(identifier); !allow {
 				c.Error(config.DenyHandler(c, identifier, err))
 				return nil
@@ -156,7 +156,7 @@ type (
 		visitors map[string]*Visitor
 		mutex    sync.Mutex
 		rate     rate.Limit // for more info check out Limiter docs - https://pkg.go.dev/golang.org/x/time/rate#Limit.
-
+		
 		burst       int
 		expiresIn   time.Duration
 		lastCleanup time.Time
@@ -208,7 +208,7 @@ Example:
 */
 func NewRateLimiterMemoryStoreWithConfig(config RateLimiterMemoryStoreConfig) (store *RateLimiterMemoryStore) {
 	store = &RateLimiterMemoryStore{}
-
+	
 	store.rate = config.Rate
 	store.burst = config.Burst
 	store.expiresIn = config.ExpiresIn

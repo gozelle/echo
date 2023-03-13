@@ -13,8 +13,8 @@ import (
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/labstack/echo/v4"
+	
+	"github.com/echo"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -46,12 +46,12 @@ func TestProxy(t *testing.T) {
 	for _, target := range targets {
 		assert.True(t, rb.AddTarget(target))
 	}
-
+	
 	// must ignore duplicates:
 	for _, target := range targets {
 		assert.False(t, rb.AddTarget(target))
 	}
-
+	
 	// Random
 	e := echo.New()
 	e.Use(Proxy(rb))
@@ -66,28 +66,28 @@ func TestProxy(t *testing.T) {
 	assert.Condition(t, func() bool {
 		return expected[body]
 	})
-
+	
 	for _, target := range targets {
 		assert.True(t, rb.RemoveTarget(target.Name))
 	}
-
+	
 	assert.False(t, rb.RemoveTarget("unknown target"))
-
+	
 	// Round-robin
 	rrb := NewRoundRobinBalancer(targets)
 	e = echo.New()
 	e.Use(Proxy(rrb))
-
+	
 	rec = httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
 	body = rec.Body.String()
 	assert.Equal(t, "target 1", body)
-
+	
 	rec = httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
 	body = rec.Body.String()
 	assert.Equal(t, "target 2", body)
-
+	
 	// ModifyResponse
 	e = echo.New()
 	e.Use(ProxyWithConfig(ProxyConfig{
@@ -98,12 +98,12 @@ func TestProxy(t *testing.T) {
 			return nil
 		},
 	}))
-
+	
 	rec = httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
 	assert.Equal(t, "modified", rec.Body.String())
 	assert.Equal(t, "1", rec.Header().Get("X-Modified"))
-
+	
 	// ProxyTarget is set in context
 	contextObserver := func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) (err error) {
@@ -113,7 +113,7 @@ func TestProxy(t *testing.T) {
 		}
 	}
 	rrb1 := NewRoundRobinBalancer(targets)
-
+	
 	e = echo.New()
 	e.Use(contextObserver)
 	e.Use(Proxy(rrb1))
@@ -141,7 +141,7 @@ func TestTargetProvider(t *testing.T) {
 	}))
 	defer t1.Close()
 	url1, _ := url.Parse(t1.URL)
-
+	
 	e := echo.New()
 	tp := &testProvider{}
 	tp.target = &ProxyTarget{Name: "target 1", URL: url1}
@@ -156,12 +156,12 @@ func TestTargetProvider(t *testing.T) {
 func TestFailNextTarget(t *testing.T) {
 	url1, err := url.Parse("http://dummy:8080")
 	assert.Nil(t, err)
-
+	
 	e := echo.New()
 	tp := &testProvider{}
 	tp.target = &ProxyTarget{Name: "target 1", URL: url1}
 	tp.err = echo.NewHTTPError(http.StatusInternalServerError, "method could not select target")
-
+	
 	e.Use(Proxy(tp))
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -180,7 +180,7 @@ func TestProxyRealIPHeader(t *testing.T) {
 	e.Use(Proxy(rrb))
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
-
+	
 	remoteAddrIP, _, _ := net.SplitHostPort(req.RemoteAddr)
 	realIPHeaderIP := "203.0.113.1"
 	extractedRealIP := "203.0.113.10"
@@ -194,7 +194,7 @@ func TestProxyRealIPHeader(t *testing.T) {
 		{true, false, realIPHeaderIP},
 		{true, true, extractedRealIP},
 	}
-
+	
 	for _, tt := range tests {
 		if tt.hasRealIPheader {
 			req.Header.Set(echo.HeaderXRealIP, realIPHeaderIP)
@@ -255,7 +255,7 @@ func TestProxyRewrite(t *testing.T) {
 			expectStatus:     http.StatusOK,
 		},
 	}
-
+	
 	for _, tc := range testCases {
 		t.Run(tc.whenPath, func(t *testing.T) {
 			receivedRequestURI := make(chan string, 1)
@@ -268,7 +268,7 @@ func TestProxyRewrite(t *testing.T) {
 			defer upstream.Close()
 			serverURL, _ := url.Parse(upstream.URL)
 			rrb := NewRoundRobinBalancer([]*ProxyTarget{{Name: "upstream", URL: serverURL}})
-
+			
 			// Rewrite
 			e := echo.New()
 			e.Use(ProxyWithConfig(ProxyConfig{
@@ -280,13 +280,13 @@ func TestProxyRewrite(t *testing.T) {
 					"/users/*/orders/*": "/user/$1/order/$2",
 				},
 			}))
-
+			
 			targetURL, _ := serverURL.Parse(tc.whenPath)
 			req := httptest.NewRequest(http.MethodGet, targetURL.String(), nil)
 			rec := httptest.NewRecorder()
-
+			
 			e.ServeHTTP(rec, req)
-
+			
 			assert.Equal(t, tc.expectStatus, rec.Code)
 			actualRequestURI := <-receivedRequestURI
 			assert.Equal(t, tc.expectProxiedURI, actualRequestURI)
@@ -306,7 +306,7 @@ func TestProxyRewriteRegex(t *testing.T) {
 	defer upstream.Close()
 	tmpUrL, _ := url.Parse(upstream.URL)
 	rrb := NewRoundRobinBalancer([]*ProxyTarget{{Name: "upstream", URL: tmpUrL}})
-
+	
 	// Rewrite
 	e := echo.New()
 	e.Use(ProxyWithConfig(ProxyConfig{
@@ -321,7 +321,7 @@ func TestProxyRewriteRegex(t *testing.T) {
 			regexp.MustCompile("^/y/(.+?)/(.*)"): "/v5/$2/$1",
 		},
 	}))
-
+	
 	testCases := []struct {
 		requestPath string
 		statusCode  int
@@ -338,15 +338,15 @@ func TestProxyRewriteRegex(t *testing.T) {
 		// $2 = `bar?q=1#frag`, $1 = `foo`. replaced uri = `/v5/bar?q=1#frag/foo` but httputil.NewSingleHostReverseProxy does not send `#frag/foo` (currently)
 		{"/y/foo/bar?q=1#frag", http.StatusOK, "/v5/bar?q=1"},
 	}
-
+	
 	for _, tc := range testCases {
 		t.Run(tc.requestPath, func(t *testing.T) {
 			targetURL, _ := url.Parse(tc.requestPath)
 			req := httptest.NewRequest(http.MethodGet, targetURL.String(), nil)
 			rec := httptest.NewRecorder()
-
+			
 			e.ServeHTTP(rec, req)
-
+			
 			actualRequestURI := <-receivedRequestURI
 			assert.Equal(t, tc.expectPath, actualRequestURI)
 			assert.Equal(t, tc.statusCode, rec.Code)
@@ -358,7 +358,7 @@ func TestProxyError(t *testing.T) {
 	// Setup
 	url1, _ := url.Parse("http://127.0.0.1:27121")
 	url2, _ := url.Parse("http://127.0.0.1:27122")
-
+	
 	targets := []*ProxyTarget{
 		{
 			Name: "target 1",
@@ -374,17 +374,17 @@ func TestProxyError(t *testing.T) {
 	for _, target := range targets {
 		assert.True(t, rb.AddTarget(target))
 	}
-
+	
 	// must ignore duplicates:
 	for _, target := range targets {
 		assert.False(t, rb.AddTarget(target))
 	}
-
+	
 	// Random
 	e := echo.New()
 	e.Use(Proxy(rb))
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-
+	
 	// Remote unreachable
 	rec := httptest.NewRecorder()
 	req.URL.Path = "/api/users"
@@ -427,7 +427,7 @@ func TestClientCancelConnectionResultsHTTPCode499(t *testing.T) {
 func TestProxyBalancerWithNoTargets(t *testing.T) {
 	rb := NewRandomBalancer(nil)
 	assert.Nil(t, rb.Next(nil))
-
+	
 	rrb := NewRoundRobinBalancer([]*ProxyTarget{})
 	assert.Nil(t, rrb.Next(nil))
 }

@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/labstack/echo/v4"
+	
+	"github.com/echo"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -24,17 +24,17 @@ func TestBodyLimit(t *testing.T) {
 		}
 		return c.String(http.StatusOK, string(body))
 	}
-
+	
 	// Based on content length (within limit)
 	if assert.NoError(t, BodyLimit("2M")(h)(c)) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Equal(t, hw, rec.Body.Bytes())
 	}
-
+	
 	// Based on content length (overlimit)
 	he := BodyLimit("2B")(h)(c).(*echo.HTTPError)
 	assert.Equal(t, http.StatusRequestEntityTooLarge, he.Code)
-
+	
 	// Based on content read (within limit)
 	req = httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(hw))
 	req.ContentLength = -1
@@ -44,7 +44,7 @@ func TestBodyLimit(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Equal(t, "Hello, World!", rec.Body.String())
 	}
-
+	
 	// Based on content read (overlimit)
 	req = httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(hw))
 	req.ContentLength = -1
@@ -59,7 +59,7 @@ func TestBodyLimitReader(t *testing.T) {
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(hw))
 	rec := httptest.NewRecorder()
-
+	
 	config := BodyLimitConfig{
 		Skipper: DefaultSkipper,
 		Limit:   "2B",
@@ -70,12 +70,12 @@ func TestBodyLimitReader(t *testing.T) {
 		reader:          io.NopCloser(bytes.NewReader(hw)),
 		context:         e.NewContext(req, rec),
 	}
-
+	
 	// read all should return ErrStatusRequestEntityTooLarge
 	_, err := io.ReadAll(reader)
 	he := err.(*echo.HTTPError)
 	assert.Equal(t, http.StatusRequestEntityTooLarge, he.Code)
-
+	
 	// reset reader and read two bytes must succeed
 	bt := make([]byte, 2)
 	reader.Reset(io.NopCloser(bytes.NewReader(hw)), e.NewContext(req, rec))
@@ -99,12 +99,12 @@ func TestBodyLimitWithConfig_Skipper(t *testing.T) {
 		},
 		Limit: "2B", // if not skipped this limit would make request to fail limit check
 	})
-
+	
 	hw := []byte("Hello, World!")
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(hw))
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
-
+	
 	err := mw(h)(c)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, rec.Code)
@@ -134,7 +134,7 @@ func TestBodyLimitWithConfig(t *testing.T) {
 			expectError: "code=413, message=Request Entity Too Large",
 		},
 	}
-
+	
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			e := echo.New()
@@ -148,11 +148,11 @@ func TestBodyLimitWithConfig(t *testing.T) {
 			mw := BodyLimitWithConfig(BodyLimitConfig{
 				Limit: tc.givenLimit,
 			})
-
+			
 			req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(tc.whenBody))
 			rec := httptest.NewRecorder()
 			c := e.NewContext(req, rec)
-
+			
 			err := mw(h)(c)
 			if tc.expectError != "" {
 				assert.EqualError(t, err, tc.expectError)

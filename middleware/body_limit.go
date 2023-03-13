@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"io"
 	"sync"
-
-	"github.com/labstack/echo/v4"
+	
+	"github.com/echo"
 	"github.com/labstack/gommon/bytes"
 )
 
@@ -14,13 +14,13 @@ type (
 	BodyLimitConfig struct {
 		// Skipper defines a function to skip middleware.
 		Skipper Skipper
-
+		
 		// Maximum allowed size for a request body, it can be specified
 		// as `4x` or `4xB`, where x is one of the multiple from K, M, G, T or P.
 		Limit string `yaml:"limit"`
 		limit int64
 	}
-
+	
 	limitedReader struct {
 		BodyLimitConfig
 		reader  io.ReadCloser
@@ -57,33 +57,33 @@ func BodyLimitWithConfig(config BodyLimitConfig) echo.MiddlewareFunc {
 	if config.Skipper == nil {
 		config.Skipper = DefaultBodyLimitConfig.Skipper
 	}
-
+	
 	limit, err := bytes.Parse(config.Limit)
 	if err != nil {
 		panic(fmt.Errorf("echo: invalid body-limit=%s", config.Limit))
 	}
 	config.limit = limit
 	pool := limitedReaderPool(config)
-
+	
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			if config.Skipper(c) {
 				return next(c)
 			}
-
+			
 			req := c.Request()
-
+			
 			// Based on content length
 			if req.ContentLength > config.limit {
 				return echo.ErrStatusRequestEntityTooLarge
 			}
-
+			
 			// Based on content read
 			r := pool.Get().(*limitedReader)
 			r.Reset(req.Body, c)
 			defer pool.Put(r)
 			req.Body = r
-
+			
 			return next(c)
 		}
 	}

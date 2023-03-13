@@ -5,8 +5,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-
-	"github.com/labstack/echo/v4"
+	
+	"github.com/echo"
 )
 
 type (
@@ -14,7 +14,7 @@ type (
 	CORSConfig struct {
 		// Skipper defines a function to skip middleware.
 		Skipper Skipper
-
+		
 		// AllowOrigins determines the value of the Access-Control-Allow-Origin
 		// response header.  This header defines a list of origins that may access the
 		// resource.  The wildcard characters '*' and '?' are supported and are
@@ -28,7 +28,7 @@ type (
 		//
 		// See also: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Origin
 		AllowOrigins []string `yaml:"allow_origins"`
-
+		
 		// AllowOriginFunc is a custom function to validate the origin. It takes the
 		// origin as an argument and returns true if allowed or false otherwise. If
 		// an error is returned, it is returned by the handler. If this option is
@@ -40,7 +40,7 @@ type (
 		//
 		// Optional.
 		AllowOriginFunc func(origin string) (bool, error) `yaml:"allow_origin_func"`
-
+		
 		// AllowMethods determines the value of the Access-Control-Allow-Methods
 		// response header.  This header specified the list of methods allowed when
 		// accessing the resource.  This is used in response to a preflight request.
@@ -52,7 +52,7 @@ type (
 		//
 		// See also: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Methods
 		AllowMethods []string `yaml:"allow_methods"`
-
+		
 		// AllowHeaders determines the value of the Access-Control-Allow-Headers
 		// response header.  This header is used in response to a preflight request to
 		// indicate which HTTP headers can be used when making the actual request.
@@ -61,7 +61,7 @@ type (
 		//
 		// See also: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Headers
 		AllowHeaders []string `yaml:"allow_headers"`
-
+		
 		// AllowCredentials determines the value of the
 		// Access-Control-Allow-Credentials response header.  This header indicates
 		// whether or not the response to the request can be exposed when the
@@ -78,7 +78,7 @@ type (
 		//
 		// See also: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Allow-Credentials
 		AllowCredentials bool `yaml:"allow_credentials"`
-
+		
 		// UnsafeWildcardOriginWithAllowCredentials UNSAFE/INSECURE: allows wildcard '*' origin to be used with AllowCredentials
 		// flag. In that case we consider any origin allowed and send it back to the client with `Access-Control-Allow-Origin` header.
 		//
@@ -87,7 +87,7 @@ type (
 		//
 		// Optional. Default value is false.
 		UnsafeWildcardOriginWithAllowCredentials bool `yaml:"unsafe_wildcard_origin_with_allow_credentials"`
-
+		
 		// ExposeHeaders determines the value of Access-Control-Expose-Headers, which
 		// defines a list of headers that clients are allowed to access.
 		//
@@ -95,7 +95,7 @@ type (
 		//
 		// See also: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Expose-Header
 		ExposeHeaders []string `yaml:"expose_headers"`
-
+		
 		// MaxAge determines the value of the Access-Control-Max-Age response header.
 		// This header indicates how long (in seconds) the results of a preflight
 		// request can be cached.
@@ -146,7 +146,7 @@ func CORSWithConfig(config CORSConfig) echo.MiddlewareFunc {
 		hasCustomAllowMethods = false
 		config.AllowMethods = DefaultCORSConfig.AllowMethods
 	}
-
+	
 	allowOriginPatterns := []string{}
 	for _, origin := range config.AllowOrigins {
 		pattern := regexp.QuoteMeta(origin)
@@ -155,30 +155,30 @@ func CORSWithConfig(config CORSConfig) echo.MiddlewareFunc {
 		pattern = "^" + pattern + "$"
 		allowOriginPatterns = append(allowOriginPatterns, pattern)
 	}
-
+	
 	allowMethods := strings.Join(config.AllowMethods, ",")
 	allowHeaders := strings.Join(config.AllowHeaders, ",")
 	exposeHeaders := strings.Join(config.ExposeHeaders, ",")
 	maxAge := strconv.Itoa(config.MaxAge)
-
+	
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			if config.Skipper(c) {
 				return next(c)
 			}
-
+			
 			req := c.Request()
 			res := c.Response()
 			origin := req.Header.Get(echo.HeaderOrigin)
 			allowOrigin := ""
-
+			
 			res.Header().Add(echo.HeaderVary, echo.HeaderOrigin)
-
+			
 			// Preflight request is an OPTIONS request, using three HTTP request headers: Access-Control-Request-Method,
 			// Access-Control-Request-Headers, and the Origin header. See: https://developer.mozilla.org/en-US/docs/Glossary/Preflight_request
 			// For simplicity we just consider method type and later `Origin` header.
 			preflight := req.Method == http.MethodOptions
-
+			
 			// Although router adds special handler in case of OPTIONS method we avoid calling next for OPTIONS in this middleware
 			// as CORS requests do not have cookies / authentication headers by default, so we could get stuck in auth
 			// middlewares by calling next(c).
@@ -192,7 +192,7 @@ func CORSWithConfig(config CORSConfig) echo.MiddlewareFunc {
 					c.Response().Header().Set(echo.HeaderAllow, routerAllowMethods)
 				}
 			}
-
+			
 			// No Origin provided. This is (probably) not request from actual browser - proceed executing middleware chain
 			if origin == "" {
 				if !preflight {
@@ -200,7 +200,7 @@ func CORSWithConfig(config CORSConfig) echo.MiddlewareFunc {
 				}
 				return c.NoContent(http.StatusNoContent)
 			}
-
+			
 			if config.AllowOriginFunc != nil {
 				allowed, err := config.AllowOriginFunc(origin)
 				if err != nil {
@@ -225,7 +225,7 @@ func CORSWithConfig(config CORSConfig) echo.MiddlewareFunc {
 						break
 					}
 				}
-
+				
 				checkPatterns := false
 				if allowOrigin == "" {
 					// to avoid regex cost by invalid (long) domains (253 is domain name max limit)
@@ -242,7 +242,7 @@ func CORSWithConfig(config CORSConfig) echo.MiddlewareFunc {
 					}
 				}
 			}
-
+			
 			// Origin not allowed
 			if allowOrigin == "" {
 				if !preflight {
@@ -250,12 +250,12 @@ func CORSWithConfig(config CORSConfig) echo.MiddlewareFunc {
 				}
 				return c.NoContent(http.StatusNoContent)
 			}
-
+			
 			res.Header().Set(echo.HeaderAccessControlAllowOrigin, allowOrigin)
 			if config.AllowCredentials {
 				res.Header().Set(echo.HeaderAccessControlAllowCredentials, "true")
 			}
-
+			
 			// Simple request
 			if !preflight {
 				if exposeHeaders != "" {
@@ -263,17 +263,17 @@ func CORSWithConfig(config CORSConfig) echo.MiddlewareFunc {
 				}
 				return next(c)
 			}
-
+			
 			// Preflight request
 			res.Header().Add(echo.HeaderVary, echo.HeaderAccessControlRequestMethod)
 			res.Header().Add(echo.HeaderVary, echo.HeaderAccessControlRequestHeaders)
-
+			
 			if !hasCustomAllowMethods && routerAllowMethods != "" {
 				res.Header().Set(echo.HeaderAccessControlAllowMethods, routerAllowMethods)
 			} else {
 				res.Header().Set(echo.HeaderAccessControlAllowMethods, allowMethods)
 			}
-
+			
 			if allowHeaders != "" {
 				res.Header().Set(echo.HeaderAccessControlAllowHeaders, allowHeaders)
 			} else {

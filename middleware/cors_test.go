@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/labstack/echo/v4"
+	
+	"github.com/echo"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -159,7 +159,7 @@ func TestCORS(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			e := echo.New()
-
+			
 			mw := CORS()
 			if tc.givenMW != nil {
 				mw = tc.givenMW
@@ -167,7 +167,7 @@ func TestCORS(t *testing.T) {
 			h := mw(func(c echo.Context) error {
 				return nil
 			})
-
+			
 			method := http.MethodGet
 			if tc.whenMethod != "" {
 				method = tc.whenMethod
@@ -178,9 +178,9 @@ func TestCORS(t *testing.T) {
 			for k, v := range tc.whenHeaders {
 				req.Header.Set(k, v)
 			}
-
+			
 			err := h(c)
-
+			
 			assert.NoError(t, err)
 			header := rec.Header()
 			for k, v := range tc.expectHeaders {
@@ -223,7 +223,7 @@ func Test_allowOriginScheme(t *testing.T) {
 			expected: false,
 		},
 	}
-
+	
 	e := echo.New()
 	for _, tt := range tests {
 		req := httptest.NewRequest(http.MethodOptions, "/", nil)
@@ -235,7 +235,7 @@ func Test_allowOriginScheme(t *testing.T) {
 		})
 		h := cors(echo.NotFoundHandler)
 		h(c)
-
+		
 		if tt.expected {
 			assert.Equal(t, tt.domain, rec.Header().Get(echo.HeaderAccessControlAllowOrigin))
 		} else {
@@ -269,7 +269,7 @@ func Test_allowOriginSubdomain(t *testing.T) {
 			pattern:  "http://*.example.com:8080",
 			expected: true,
 		},
-
+		
 		{
 			domain:   "http://fuga.hoge.com",
 			pattern:  "http://*.example.com",
@@ -314,7 +314,7 @@ func Test_allowOriginSubdomain(t *testing.T) {
 			expected: false,
 		},
 	}
-
+	
 	e := echo.New()
 	for _, tt := range tests {
 		req := httptest.NewRequest(http.MethodOptions, "/", nil)
@@ -326,7 +326,7 @@ func Test_allowOriginSubdomain(t *testing.T) {
 		})
 		h := cors(echo.NotFoundHandler)
 		h(c)
-
+		
 		if tt.expected {
 			assert.Equal(t, tt.domain, rec.Header().Get(echo.HeaderAccessControlAllowOrigin))
 		} else {
@@ -340,10 +340,10 @@ func TestCORSWithConfig_AllowMethods(t *testing.T) {
 		name            string
 		allowOrigins    []string
 		allowContextKey string
-
+		
 		whenOrigin       string
 		whenAllowMethods []string
-
+		
 		expectAllow                     string
 		expectAccessControlAllowMethods string
 	}{
@@ -386,31 +386,31 @@ func TestCORSWithConfig_AllowMethods(t *testing.T) {
 			expectAccessControlAllowMethods: "GET,HEAD,PUT,PATCH,POST,DELETE",
 		},
 	}
-
+	
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			e := echo.New()
 			e.GET("/test", func(c echo.Context) error {
 				return c.String(http.StatusOK, "OK")
 			})
-
+			
 			cors := CORSWithConfig(CORSConfig{
 				AllowOrigins: tc.allowOrigins,
 				AllowMethods: tc.whenAllowMethods,
 			})
-
+			
 			req := httptest.NewRequest(http.MethodOptions, "/test", nil)
 			rec := httptest.NewRecorder()
 			c := e.NewContext(req, rec)
-
+			
 			req.Header.Set(echo.HeaderOrigin, tc.whenOrigin)
 			if tc.allowContextKey != "" {
 				c.Set(echo.ContextKeyHeaderAllow, tc.allowContextKey)
 			}
-
+			
 			h := cors(echo.NotFoundHandler)
 			h(c)
-
+			
 			assert.Equal(t, tc.expectAllow, rec.Header().Get(echo.HeaderAllow))
 			assert.Equal(t, tc.expectAccessControlAllowMethods, rec.Header().Get(echo.HeaderAccessControlAllowMethods))
 		})
@@ -513,38 +513,38 @@ func TestCorsHeaders(t *testing.T) {
 			expectAllowHeader: "OPTIONS, GET, POST",
 		},
 	}
-
+	
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			e := echo.New()
-
+			
 			e.Use(CORSWithConfig(CORSConfig{
 				AllowOrigins: []string{tc.allowedOrigin},
 				//AllowCredentials: true,
 				//MaxAge:           3600,
 			}))
-
+			
 			e.GET("/", func(c echo.Context) error {
 				return c.String(http.StatusOK, "OK")
 			})
 			e.POST("/", func(c echo.Context) error {
 				return c.String(http.StatusCreated, "OK")
 			})
-
+			
 			req := httptest.NewRequest(tc.method, "/", nil)
 			rec := httptest.NewRecorder()
-
+			
 			if tc.originDomain != "" {
 				req.Header.Set(echo.HeaderOrigin, tc.originDomain)
 			}
-
+			
 			// we run through whole Echo handler chain to see how CORS works with Router OPTIONS handler
 			e.ServeHTTP(rec, req)
-
+			
 			assert.Equal(t, echo.HeaderOrigin, rec.Header().Get(echo.HeaderVary))
 			assert.Equal(t, tc.expectAllowHeader, rec.Header().Get(echo.HeaderAllow))
 			assert.Equal(t, tc.expectStatus, rec.Code)
-
+			
 			expectedAllowOrigin := ""
 			if tc.allowedOrigin == "*" {
 				expectedAllowOrigin = "*"
@@ -555,9 +555,9 @@ func TestCorsHeaders(t *testing.T) {
 			case tc.expected && tc.method == http.MethodOptions:
 				assert.Contains(t, rec.Header(), echo.HeaderAccessControlAllowMethods)
 				assert.Equal(t, expectedAllowOrigin, rec.Header().Get(echo.HeaderAccessControlAllowOrigin))
-
+				
 				assert.Equal(t, 3, len(rec.Header()[echo.HeaderVary]))
-
+			
 			case tc.expected && tc.method == http.MethodGet:
 				assert.Equal(t, expectedAllowOrigin, rec.Header().Get(echo.HeaderAccessControlAllowOrigin))
 				assert.Equal(t, 1, len(rec.Header()[echo.HeaderVary])) // Vary: Origin
@@ -566,7 +566,7 @@ func TestCorsHeaders(t *testing.T) {
 				assert.Equal(t, 1, len(rec.Header()[echo.HeaderVary])) // Vary: Origin
 			}
 		})
-
+		
 	}
 }
 
@@ -580,15 +580,15 @@ func Test_allowOriginFunc(t *testing.T) {
 	returnError := func(origin string) (bool, error) {
 		return true, errors.New("this is a test error")
 	}
-
+	
 	allowOriginFuncs := []func(origin string) (bool, error){
 		returnTrue,
 		returnFalse,
 		returnError,
 	}
-
+	
 	const origin = "http://example.com"
-
+	
 	e := echo.New()
 	for _, allowOriginFunc := range allowOriginFuncs {
 		req := httptest.NewRequest(http.MethodOptions, "/", nil)
@@ -600,14 +600,14 @@ func Test_allowOriginFunc(t *testing.T) {
 		})
 		h := cors(echo.NotFoundHandler)
 		err := h(c)
-
+		
 		expected, expectedErr := allowOriginFunc(origin)
 		if expectedErr != nil {
 			assert.Equal(t, expectedErr, err)
 			assert.Equal(t, "", rec.Header().Get(echo.HeaderAccessControlAllowOrigin))
 			continue
 		}
-
+		
 		if expected {
 			assert.Equal(t, origin, rec.Header().Get(echo.HeaderAccessControlAllowOrigin))
 		} else {

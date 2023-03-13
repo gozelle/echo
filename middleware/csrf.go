@@ -4,8 +4,8 @@ import (
 	"crypto/subtle"
 	"net/http"
 	"time"
-
-	"github.com/labstack/echo/v4"
+	
+	"github.com/echo"
 	"github.com/labstack/gommon/random"
 )
 
@@ -14,11 +14,11 @@ type (
 	CSRFConfig struct {
 		// Skipper defines a function to skip middleware.
 		Skipper Skipper
-
+		
 		// TokenLength is the length of the generated token.
 		TokenLength uint8 `yaml:"token_length"`
 		// Optional. Default value 32.
-
+		
 		// TokenLookup is a string in the form of "<source>:<name>" or "<source>:<name>,<source>:<name>" that is used
 		// to extract token from the request.
 		// Optional. Default value "header:X-CSRF-Token".
@@ -29,43 +29,43 @@ type (
 		// Multiple sources example:
 		// - "header:X-CSRF-Token,query:csrf"
 		TokenLookup string `yaml:"token_lookup"`
-
+		
 		// Context key to store generated CSRF token into context.
 		// Optional. Default value "csrf".
 		ContextKey string `yaml:"context_key"`
-
+		
 		// Name of the CSRF cookie. This cookie will store CSRF token.
 		// Optional. Default value "csrf".
 		CookieName string `yaml:"cookie_name"`
-
+		
 		// Domain of the CSRF cookie.
 		// Optional. Default value none.
 		CookieDomain string `yaml:"cookie_domain"`
-
+		
 		// Path of the CSRF cookie.
 		// Optional. Default value none.
 		CookiePath string `yaml:"cookie_path"`
-
+		
 		// Max age (in seconds) of the CSRF cookie.
 		// Optional. Default value 86400 (24hr).
 		CookieMaxAge int `yaml:"cookie_max_age"`
-
+		
 		// Indicates if CSRF cookie is secure.
 		// Optional. Default value false.
 		CookieSecure bool `yaml:"cookie_secure"`
-
+		
 		// Indicates if CSRF cookie is HTTP only.
 		// Optional. Default value false.
 		CookieHTTPOnly bool `yaml:"cookie_http_only"`
-
+		
 		// Indicates SameSite mode of the CSRF cookie.
 		// Optional. Default value SameSiteDefaultMode.
 		CookieSameSite http.SameSite `yaml:"cookie_same_site"`
-
+		
 		// ErrorHandler defines a function which is executed for returning custom errors.
 		ErrorHandler CSRFErrorHandler
 	}
-
+	
 	// CSRFErrorHandler is a function which is executed for creating custom errors.
 	CSRFErrorHandler func(err error, c echo.Context) error
 )
@@ -118,25 +118,25 @@ func CSRFWithConfig(config CSRFConfig) echo.MiddlewareFunc {
 	if config.CookieSameSite == http.SameSiteNoneMode {
 		config.CookieSecure = true
 	}
-
+	
 	extractors, cErr := CreateExtractors(config.TokenLookup)
 	if cErr != nil {
 		panic(cErr)
 	}
-
+	
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			if config.Skipper(c) {
 				return next(c)
 			}
-
+			
 			token := ""
 			if k, err := c.Cookie(config.CookieName); err != nil {
 				token = random.String(config.TokenLength) // Generate token
 			} else {
 				token = k.Value // Reuse token
 			}
-
+			
 			switch c.Request().Method {
 			case http.MethodGet, http.MethodHead, http.MethodOptions, http.MethodTrace:
 			default:
@@ -150,7 +150,7 @@ func CSRFWithConfig(config CSRFConfig) echo.MiddlewareFunc {
 						lastExtractorErr = err
 						continue
 					}
-
+					
 					for _, clientToken := range clientTokens {
 						if validateCSRFToken(token, clientToken) {
 							lastTokenErr = nil
@@ -176,7 +176,7 @@ func CSRFWithConfig(config CSRFConfig) echo.MiddlewareFunc {
 					}
 					finalErr = lastExtractorErr
 				}
-
+				
 				if finalErr != nil {
 					if config.ErrorHandler != nil {
 						return config.ErrorHandler(finalErr, c)
@@ -184,7 +184,7 @@ func CSRFWithConfig(config CSRFConfig) echo.MiddlewareFunc {
 					return finalErr
 				}
 			}
-
+			
 			// Set CSRF cookie
 			cookie := new(http.Cookie)
 			cookie.Name = config.CookieName
@@ -202,13 +202,13 @@ func CSRFWithConfig(config CSRFConfig) echo.MiddlewareFunc {
 			cookie.Secure = config.CookieSecure
 			cookie.HttpOnly = config.CookieHTTPOnly
 			c.SetCookie(cookie)
-
+			
 			// Store token in the context
 			c.Set(config.ContextKey, token)
-
+			
 			// Protect clients from caching the response
 			c.Response().Header().Add(echo.HeaderVary, echo.HeaderCookie)
-
+			
 			return next(c)
 		}
 	}

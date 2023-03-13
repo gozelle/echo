@@ -6,8 +6,8 @@ import (
 	"io"
 	"net"
 	"net/http"
-
-	"github.com/labstack/echo/v4"
+	
+	"github.com/echo"
 )
 
 type (
@@ -15,15 +15,15 @@ type (
 	BodyDumpConfig struct {
 		// Skipper defines a function to skip middleware.
 		Skipper Skipper
-
+		
 		// Handler receives request and response payload.
 		// Required.
 		Handler BodyDumpHandler
 	}
-
+	
 	// BodyDumpHandler receives the request and response payload.
 	BodyDumpHandler func(echo.Context, []byte, []byte)
-
+	
 	bodyDumpResponseWriter struct {
 		io.Writer
 		http.ResponseWriter
@@ -57,33 +57,33 @@ func BodyDumpWithConfig(config BodyDumpConfig) echo.MiddlewareFunc {
 	if config.Skipper == nil {
 		config.Skipper = DefaultBodyDumpConfig.Skipper
 	}
-
+	
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) (err error) {
 			if config.Skipper(c) {
 				return next(c)
 			}
-
+			
 			// Request
 			reqBody := []byte{}
 			if c.Request().Body != nil { // Read
 				reqBody, _ = io.ReadAll(c.Request().Body)
 			}
 			c.Request().Body = io.NopCloser(bytes.NewBuffer(reqBody)) // Reset
-
+			
 			// Response
 			resBody := new(bytes.Buffer)
 			mw := io.MultiWriter(c.Response().Writer, resBody)
 			writer := &bodyDumpResponseWriter{Writer: mw, ResponseWriter: c.Response().Writer}
 			c.Response().Writer = writer
-
+			
 			if err = next(c); err != nil {
 				c.Error(err)
 			}
-
+			
 			// Callback
 			config.Handler(c, reqBody, resBody.Bytes())
-
+			
 			return
 		}
 	}

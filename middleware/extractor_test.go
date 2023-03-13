@@ -3,7 +3,7 @@ package middleware
 import (
 	"bytes"
 	"fmt"
-	"github.com/labstack/echo/v4"
+	"github.com/echo"
 	"github.com/stretchr/testify/assert"
 	"mime/multipart"
 	"net/http"
@@ -54,7 +54,7 @@ func TestCreateExtractors(t *testing.T) {
 			givenRequest: func() *http.Request {
 				f := make(url.Values)
 				f.Set("name", "Jon Snow")
-
+				
 				req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(f.Encode()))
 				req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationForm)
 				return req
@@ -95,11 +95,11 @@ func TestCreateExtractors(t *testing.T) {
 			expectCreateError: "extractor source for lookup could not be split into needed parts: query",
 		},
 	}
-
+	
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			e := echo.New()
-
+			
 			req := httptest.NewRequest(http.MethodGet, "/", nil)
 			if tc.givenRequest != nil {
 				req = tc.givenRequest()
@@ -109,14 +109,14 @@ func TestCreateExtractors(t *testing.T) {
 			if tc.givenPathParams != nil {
 				setPathParams(c, tc.givenPathParams)
 			}
-
+			
 			extractors, err := CreateExtractors(tc.whenLoopups)
 			if tc.expectCreateError != "" {
 				assert.EqualError(t, err, tc.expectCreateError)
 				return
 			}
 			assert.NoError(t, err)
-
+			
 			for _, e := range extractors {
 				values, eErr := e(c)
 				assert.Equal(t, tc.expectValues, values)
@@ -134,7 +134,7 @@ func TestValuesFromHeader(t *testing.T) {
 	exampleRequest := func(req *http.Request) {
 		req.Header.Set(echo.HeaderAuthorization, "basic dXNlcjpwYXNzd29yZA==")
 	}
-
+	
 	var testCases = []struct {
 		name            string
 		givenRequest    func(req *http.Request)
@@ -230,20 +230,20 @@ func TestValuesFromHeader(t *testing.T) {
 			},
 		},
 	}
-
+	
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			e := echo.New()
-
+			
 			req := httptest.NewRequest(http.MethodGet, "/", nil)
 			if tc.givenRequest != nil {
 				tc.givenRequest(req)
 			}
 			rec := httptest.NewRecorder()
 			c := e.NewContext(req, rec)
-
+			
 			extractor := valuesFromHeader(tc.whenName, tc.whenValuePrefix)
-
+			
 			values, err := extractor(c)
 			assert.Equal(t, tc.expectValues, values)
 			if tc.expectError != "" {
@@ -294,17 +294,17 @@ func TestValuesFromQuery(t *testing.T) {
 			},
 		},
 	}
-
+	
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			e := echo.New()
-
+			
 			req := httptest.NewRequest(http.MethodGet, "/"+tc.givenQueryPart, nil)
 			rec := httptest.NewRecorder()
 			c := e.NewContext(req, rec)
-
+			
 			extractor := valuesFromQuery(tc.whenName)
-
+			
 			values, err := extractor(c)
 			assert.Equal(t, tc.expectValues, values)
 			if tc.expectError != "" {
@@ -326,7 +326,7 @@ func TestValuesFromParam(t *testing.T) {
 	for i := 1; i < 25; i++ {
 		examplePathParams20 = append(examplePathParams20, pathParam{name: "id", value: fmt.Sprintf("%v", i)})
 	}
-
+	
 	var testCases = []struct {
 		name            string
 		givenPathParams []pathParam
@@ -370,20 +370,20 @@ func TestValuesFromParam(t *testing.T) {
 			},
 		},
 	}
-
+	
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			e := echo.New()
-
+			
 			req := httptest.NewRequest(http.MethodGet, "/", nil)
 			rec := httptest.NewRecorder()
 			c := e.NewContext(req, rec)
 			if tc.givenPathParams != nil {
 				setPathParams(c, tc.givenPathParams)
 			}
-
+			
 			extractor := valuesFromParam(tc.whenName)
-
+			
 			values, err := extractor(c)
 			assert.Equal(t, tc.expectValues, values)
 			if tc.expectError != "" {
@@ -399,7 +399,7 @@ func TestValuesFromCookie(t *testing.T) {
 	exampleRequest := func(req *http.Request) {
 		req.Header.Set(echo.HeaderCookie, "_csrf=token")
 	}
-
+	
 	var testCases = []struct {
 		name         string
 		givenRequest func(req *http.Request)
@@ -450,20 +450,20 @@ func TestValuesFromCookie(t *testing.T) {
 			},
 		},
 	}
-
+	
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			e := echo.New()
-
+			
 			req := httptest.NewRequest(http.MethodGet, "/", nil)
 			if tc.givenRequest != nil {
 				tc.givenRequest(req)
 			}
 			rec := httptest.NewRecorder()
 			c := e.NewContext(req, rec)
-
+			
 			extractor := valuesFromCookie(tc.whenName)
-
+			
 			values, err := extractor(c)
 			assert.Equal(t, tc.expectValues, values)
 			if tc.expectError != "" {
@@ -483,10 +483,10 @@ func TestValuesFromForm(t *testing.T) {
 		if mod != nil {
 			mod(&f)
 		}
-
+		
 		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(f.Encode()))
 		req.Header.Add(echo.HeaderContentType, echo.MIMEApplicationForm)
-
+		
 		return req
 	}
 	exampleGetFormRequest := func(mod func(v *url.Values)) *http.Request {
@@ -496,11 +496,11 @@ func TestValuesFromForm(t *testing.T) {
 		if mod != nil {
 			mod(&f)
 		}
-
+		
 		req := httptest.NewRequest(http.MethodGet, "/?"+f.Encode(), nil)
 		return req
 	}
-
+	
 	exampleMultiPartFormRequest := func(mod func(w *multipart.Writer)) *http.Request {
 		var b bytes.Buffer
 		w := multipart.NewWriter(&b)
@@ -509,17 +509,17 @@ func TestValuesFromForm(t *testing.T) {
 		if mod != nil {
 			mod(w)
 		}
-
+		
 		fw, _ := w.CreateFormFile("upload", "my.file")
 		fw.Write([]byte(`<div>hi</div>`))
 		w.Close()
-
+		
 		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(b.String()))
 		req.Header.Add(echo.HeaderContentType, w.FormDataContentType())
-
+		
 		return req
 	}
-
+	
 	var testCases = []struct {
 		name         string
 		givenRequest *http.Request
@@ -583,17 +583,17 @@ func TestValuesFromForm(t *testing.T) {
 			},
 		},
 	}
-
+	
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			e := echo.New()
-
+			
 			req := tc.givenRequest
 			rec := httptest.NewRecorder()
 			c := e.NewContext(req, rec)
-
+			
 			extractor := valuesFromForm(tc.whenName)
-
+			
 			values, err := extractor(c)
 			assert.Equal(t, tc.expectValues, values)
 			if tc.expectError != "" {

@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"errors"
-	"github.com/labstack/echo/v4"
+	"github.com/echo"
 	"net/http"
 )
 
@@ -11,7 +11,7 @@ type (
 	KeyAuthConfig struct {
 		// Skipper defines a function to skip middleware.
 		Skipper Skipper
-
+		
 		// KeyLookup is a string in the form of "<source>:<name>" or "<source>:<name>,<source>:<name>" that is used
 		// to extract key from the request.
 		// Optional. Default value "header:Authorization".
@@ -27,19 +27,19 @@ type (
 		// Multiple sources example:
 		// - "header:Authorization,header:X-Api-Key"
 		KeyLookup string
-
+		
 		// AuthScheme to be used in the Authorization header.
 		// Optional. Default value "Bearer".
 		AuthScheme string
-
+		
 		// Validator is a function to validate key.
 		// Required.
 		Validator KeyAuthValidator
-
+		
 		// ErrorHandler defines a function which is executed for an invalid key.
 		// It may be used to define a custom error.
 		ErrorHandler KeyAuthErrorHandler
-
+		
 		// ContinueOnIgnoredError allows the next middleware/handler to be called when ErrorHandler decides to
 		// ignore the error (by returning `nil`).
 		// This is useful when parts of your site/api allow public access and some authorized routes provide extra functionality.
@@ -47,10 +47,10 @@ type (
 		// and continue. Some logic down the remaining execution chain needs to check that (public) key auth value then.
 		ContinueOnIgnoredError bool
 	}
-
+	
 	// KeyAuthValidator defines a function to validate KeyAuth credentials.
 	KeyAuthValidator func(auth string, c echo.Context) (bool, error)
-
+	
 	// KeyAuthErrorHandler defines a function which is executed for an invalid key.
 	KeyAuthErrorHandler func(err error, c echo.Context) error
 )
@@ -107,18 +107,18 @@ func KeyAuthWithConfig(config KeyAuthConfig) echo.MiddlewareFunc {
 	if config.Validator == nil {
 		panic("echo: key-auth middleware requires a validator function")
 	}
-
+	
 	extractors, cErr := createExtractors(config.KeyLookup, config.AuthScheme)
 	if cErr != nil {
 		panic(cErr)
 	}
-
+	
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			if config.Skipper(c) {
 				return next(c)
 			}
-
+			
 			var lastExtractorErr error
 			var lastValidatorErr error
 			for _, extractor := range extractors {
@@ -139,7 +139,7 @@ func KeyAuthWithConfig(config KeyAuthConfig) echo.MiddlewareFunc {
 					lastValidatorErr = errors.New("invalid key")
 				}
 			}
-
+			
 			// we are here only when we did not successfully extract and validate any of keys
 			err := lastValidatorErr
 			if err == nil { // prioritize validator errors over extracting errors
@@ -159,7 +159,7 @@ func KeyAuthWithConfig(config KeyAuthConfig) echo.MiddlewareFunc {
 				}
 				err = &ErrKeyAuthMissing{Err: err}
 			}
-
+			
 			if config.ErrorHandler != nil {
 				tmpErr := config.ErrorHandler(err, c)
 				if config.ContinueOnIgnoredError && tmpErr == nil {

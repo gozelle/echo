@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
-
-	"github.com/labstack/echo/v4"
+	
+	"github.com/echo"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -124,11 +124,11 @@ func TestStatic(t *testing.T) {
 			expectContains: "<title>Echo</title>",
 		},
 	}
-
+	
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			e := echo.New()
-
+			
 			config := StaticConfig{Root: "../_fixture"}
 			if tc.givenConfig != nil {
 				config = *tc.givenConfig
@@ -148,12 +148,12 @@ func TestStatic(t *testing.T) {
 					return c.String(http.StatusOK, "ok")
 				})
 			}
-
+			
 			req := httptest.NewRequest(http.MethodGet, tc.whenURL, nil)
 			rec := httptest.NewRecorder()
-
+			
 			e.ServeHTTP(rec, req)
-
+			
 			assert.Equal(t, tc.expectCode, rec.Code)
 			if tc.expectContains != "" {
 				responseBody := rec.Body.String()
@@ -287,7 +287,7 @@ func TestStatic_GroupWithStatic(t *testing.T) {
 			expectBodyStartsWith: "{\"message\":\"Not Found\"}\n",
 		},
 	}
-
+	
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			e := echo.New()
@@ -297,7 +297,7 @@ func TestStatic_GroupWithStatic(t *testing.T) {
 			}
 			g := e.Group(group)
 			g.Static(tc.givenPrefix, tc.givenRoot)
-
+			
 			req := httptest.NewRequest(http.MethodGet, tc.whenURL, nil)
 			rec := httptest.NewRecorder()
 			e.ServeHTTP(rec, req)
@@ -308,7 +308,7 @@ func TestStatic_GroupWithStatic(t *testing.T) {
 			} else {
 				assert.Equal(t, "", body)
 			}
-
+			
 			if tc.expectHeaderLocation != "" {
 				assert.Equal(t, tc.expectHeaderLocation, rec.Header().Get(echo.HeaderLocation))
 			} else {
@@ -335,7 +335,7 @@ func TestStatic_CustomFS(t *testing.T) {
 			expectCode:     http.StatusOK,
 			expectContains: "<title>Echo</title>",
 		},
-
+		
 		{
 			name:           "ok, serve index with Echo message",
 			whenURL:        "/_fixture/",
@@ -379,28 +379,28 @@ func TestStatic_CustomFS(t *testing.T) {
 			},
 		},
 	}
-
+	
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			e := echo.New()
-
+			
 			config := StaticConfig{
 				Root:       ".",
 				Filesystem: http.FS(tc.filesystem),
 			}
-
+			
 			if tc.root != "" {
 				config.Root = tc.root
 			}
-
+			
 			middlewareFunc := StaticWithConfig(config)
 			e.Use(middlewareFunc)
-
+			
 			req := httptest.NewRequest(http.MethodGet, tc.whenURL, nil)
 			rec := httptest.NewRecorder()
-
+			
 			e.ServeHTTP(rec, req)
-
+			
 			assert.Equal(t, tc.expectCode, rec.Code)
 			if tc.expectContains != "" {
 				responseBody := rec.Body.String()

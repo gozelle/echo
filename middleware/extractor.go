@@ -3,7 +3,7 @@ package middleware
 import (
 	"errors"
 	"fmt"
-	"github.com/labstack/echo/v4"
+	"github.com/echo"
 	"net/textproto"
 	"strings"
 )
@@ -55,7 +55,7 @@ func createExtractors(lookups string, authScheme string) ([]ValuesExtractor, err
 		if len(parts) < 2 {
 			return nil, fmt.Errorf("extractor source for lookup could not be split into needed parts: %v", source)
 		}
-
+		
 		switch parts[0] {
 		case "query":
 			extractors = append(extractors, valuesFromQuery(parts[1]))
@@ -100,7 +100,7 @@ func valuesFromHeader(header string, valuePrefix string) ValuesExtractor {
 		if len(values) == 0 {
 			return nil, errHeaderExtractorValueMissing
 		}
-
+		
 		result := make([]string, 0)
 		for i, value := range values {
 			if prefixLen == 0 {
@@ -117,7 +117,7 @@ func valuesFromHeader(header string, valuePrefix string) ValuesExtractor {
 				}
 			}
 		}
-
+		
 		if len(result) == 0 {
 			if prefixLen > 0 {
 				return nil, errHeaderExtractorValueInvalid
@@ -168,7 +168,7 @@ func valuesFromCookie(name string) ValuesExtractor {
 		if len(cookies) == 0 {
 			return nil, errCookieExtractorValueMissing
 		}
-
+		
 		result := make([]string, 0)
 		for i, cookie := range cookies {
 			if name == cookie.Name {

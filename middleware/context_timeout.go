@@ -4,18 +4,18 @@ import (
 	"context"
 	"errors"
 	"time"
-
-	"github.com/labstack/echo/v4"
+	
+	"github.com/echo"
 )
 
 // ContextTimeoutConfig defines the config for ContextTimeout middleware.
 type ContextTimeoutConfig struct {
 	// Skipper defines a function to skip middleware.
 	Skipper Skipper
-
+	
 	// ErrorHandler is a function when error aries in middeware execution.
 	ErrorHandler func(err error, c echo.Context) error
-
+	
 	// Timeout configures a timeout for the middleware, defaults to 0 for no timeout
 	Timeout time.Duration
 }
@@ -51,18 +51,18 @@ func (config ContextTimeoutConfig) ToMiddleware() (echo.MiddlewareFunc, error) {
 			return err
 		}
 	}
-
+	
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			if config.Skipper(c) {
 				return next(c)
 			}
-
+			
 			timeoutContext, cancel := context.WithTimeout(c.Request().Context(), config.Timeout)
 			defer cancel()
-
+			
 			c.SetRequest(c.Request().WithContext(timeoutContext))
-
+			
 			if err := next(c); err != nil {
 				return config.ErrorHandler(err, c)
 			}

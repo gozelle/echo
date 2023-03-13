@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/labstack/echo/v4"
+	
+	"github.com/echo"
 	"github.com/labstack/gommon/log"
 	"github.com/stretchr/testify/assert"
 )
@@ -51,9 +51,9 @@ func TestRecoverErrAbortHandler(t *testing.T) {
 			}
 		}
 	}()
-
+	
 	h(c)
-
+	
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 	assert.NotContains(t, buf.String(), "PANIC RECOVER")
 }
@@ -78,30 +78,30 @@ func TestRecoverWithConfig_LogLevel(t *testing.T) {
 		logLevel:  log.OFF,
 		levelName: "OFF",
 	}}
-
+	
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.levelName, func(t *testing.T) {
 			e := echo.New()
 			e.Logger.SetLevel(log.DEBUG)
-
+			
 			buf := new(bytes.Buffer)
 			e.Logger.SetOutput(buf)
-
+			
 			req := httptest.NewRequest(http.MethodGet, "/", nil)
 			rec := httptest.NewRecorder()
 			c := e.NewContext(req, rec)
-
+			
 			config := DefaultRecoverConfig
 			config.LogLevel = tt.logLevel
 			h := RecoverWithConfig(config)(echo.HandlerFunc(func(c echo.Context) error {
 				panic("test")
 			}))
-
+			
 			h(c)
-
+			
 			assert.Equal(t, http.StatusInternalServerError, rec.Code)
-
+			
 			output := buf.String()
 			if tt.logLevel == log.OFF {
 				assert.Empty(t, output)
@@ -116,14 +116,14 @@ func TestRecoverWithConfig_LogLevel(t *testing.T) {
 func TestRecoverWithConfig_LogErrorFunc(t *testing.T) {
 	e := echo.New()
 	e.Logger.SetLevel(log.DEBUG)
-
+	
 	buf := new(bytes.Buffer)
 	e.Logger.SetOutput(buf)
-
+	
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
-
+	
 	testError := errors.New("test")
 	config := DefaultRecoverConfig
 	config.LogErrorFunc = func(c echo.Context, err error, stack []byte) error {
@@ -135,30 +135,30 @@ func TestRecoverWithConfig_LogErrorFunc(t *testing.T) {
 		}
 		return err
 	}
-
+	
 	t.Run("first branch case for LogErrorFunc", func(t *testing.T) {
 		buf.Reset()
 		h := RecoverWithConfig(config)(echo.HandlerFunc(func(c echo.Context) error {
 			panic(testError)
 		}))
-
+		
 		h(c)
 		assert.Equal(t, http.StatusInternalServerError, rec.Code)
-
+		
 		output := buf.String()
 		assert.Contains(t, output, "PANIC RECOVER")
 		assert.Contains(t, output, `"level":"DEBUG"`)
 	})
-
+	
 	t.Run("else branch case for LogErrorFunc", func(t *testing.T) {
 		buf.Reset()
 		h := RecoverWithConfig(config)(echo.HandlerFunc(func(c echo.Context) error {
 			panic("other")
 		}))
-
+		
 		h(c)
 		assert.Equal(t, http.StatusInternalServerError, rec.Code)
-
+		
 		output := buf.String()
 		assert.Contains(t, output, "PANIC RECOVER")
 		assert.Contains(t, output, `"level":"ERROR"`)
@@ -172,14 +172,14 @@ func TestRecoverWithDisabled_ErrorHandler(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
-
+	
 	config := DefaultRecoverConfig
 	config.DisableErrorHandler = true
 	h := RecoverWithConfig(config)(echo.HandlerFunc(func(c echo.Context) error {
 		panic("test")
 	}))
 	err := h(c)
-
+	
 	assert.Equal(t, http.StatusOK, rec.Code)
 	assert.Contains(t, buf.String(), "PANIC RECOVER")
 	assert.EqualError(t, err, "test")

@@ -9,8 +9,8 @@ import (
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/labstack/echo/v4"
+	
+	"github.com/echo"
 	"github.com/labstack/gommon/random"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/time/rate"
@@ -18,15 +18,15 @@ import (
 
 func TestRateLimiter(t *testing.T) {
 	e := echo.New()
-
+	
 	handler := func(c echo.Context) error {
 		return c.String(http.StatusOK, "test")
 	}
-
+	
 	var inMemoryStore = NewRateLimiterMemoryStoreWithConfig(RateLimiterMemoryStoreConfig{Rate: 1, Burst: 3})
-
+	
 	mw := RateLimiter(inMemoryStore)
-
+	
 	testCases := []struct {
 		id   string
 		code int
@@ -39,14 +39,14 @@ func TestRateLimiter(t *testing.T) {
 		{"127.0.0.1", http.StatusTooManyRequests},
 		{"127.0.0.1", http.StatusTooManyRequests},
 	}
-
+	
 	for _, tc := range testCases {
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		req.Header.Add(echo.HeaderXRealIP, tc.id)
-
+		
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
-
+		
 		_ = mw(handler)(c)
 		assert.Equal(t, tc.code, rec.Code)
 	}
@@ -54,11 +54,11 @@ func TestRateLimiter(t *testing.T) {
 
 func TestRateLimiter_panicBehaviour(t *testing.T) {
 	var inMemoryStore = NewRateLimiterMemoryStoreWithConfig(RateLimiterMemoryStoreConfig{Rate: 1, Burst: 3})
-
+	
 	assert.Panics(t, func() {
 		RateLimiter(nil)
 	})
-
+	
 	assert.NotPanics(t, func() {
 		RateLimiter(inMemoryStore)
 	})
@@ -66,13 +66,13 @@ func TestRateLimiter_panicBehaviour(t *testing.T) {
 
 func TestRateLimiterWithConfig(t *testing.T) {
 	var inMemoryStore = NewRateLimiterMemoryStoreWithConfig(RateLimiterMemoryStoreConfig{Rate: 1, Burst: 3})
-
+	
 	e := echo.New()
-
+	
 	handler := func(c echo.Context) error {
 		return c.String(http.StatusOK, "test")
 	}
-
+	
 	mw := RateLimiterWithConfig(RateLimiterConfig{
 		IdentifierExtractor: func(c echo.Context) (string, error) {
 			id := c.Request().Header.Get(echo.HeaderXRealIP)
@@ -89,7 +89,7 @@ func TestRateLimiterWithConfig(t *testing.T) {
 		},
 		Store: inMemoryStore,
 	})
-
+	
 	testCases := []struct {
 		id   string
 		code int
@@ -102,30 +102,30 @@ func TestRateLimiterWithConfig(t *testing.T) {
 		{"127.0.0.1", http.StatusForbidden},
 		{"127.0.0.1", http.StatusForbidden},
 	}
-
+	
 	for _, tc := range testCases {
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		req.Header.Add(echo.HeaderXRealIP, tc.id)
-
+		
 		rec := httptest.NewRecorder()
-
+		
 		c := e.NewContext(req, rec)
-
+		
 		_ = mw(handler)(c)
-
+		
 		assert.Equal(t, tc.code, rec.Code)
 	}
 }
 
 func TestRateLimiterWithConfig_defaultDenyHandler(t *testing.T) {
 	var inMemoryStore = NewRateLimiterMemoryStoreWithConfig(RateLimiterMemoryStoreConfig{Rate: 1, Burst: 3})
-
+	
 	e := echo.New()
-
+	
 	handler := func(c echo.Context) error {
 		return c.String(http.StatusOK, "test")
 	}
-
+	
 	mw := RateLimiterWithConfig(RateLimiterConfig{
 		IdentifierExtractor: func(c echo.Context) (string, error) {
 			id := c.Request().Header.Get(echo.HeaderXRealIP)
@@ -136,7 +136,7 @@ func TestRateLimiterWithConfig_defaultDenyHandler(t *testing.T) {
 		},
 		Store: inMemoryStore,
 	})
-
+	
 	testCases := []struct {
 		id   string
 		code int
@@ -149,17 +149,17 @@ func TestRateLimiterWithConfig_defaultDenyHandler(t *testing.T) {
 		{"127.0.0.1", http.StatusTooManyRequests},
 		{"127.0.0.1", http.StatusTooManyRequests},
 	}
-
+	
 	for _, tc := range testCases {
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		req.Header.Add(echo.HeaderXRealIP, tc.id)
-
+		
 		rec := httptest.NewRecorder()
-
+		
 		c := e.NewContext(req, rec)
-
+		
 		_ = mw(handler)(c)
-
+		
 		assert.Equal(t, tc.code, rec.Code)
 	}
 }
@@ -167,17 +167,17 @@ func TestRateLimiterWithConfig_defaultDenyHandler(t *testing.T) {
 func TestRateLimiterWithConfig_defaultConfig(t *testing.T) {
 	{
 		var inMemoryStore = NewRateLimiterMemoryStoreWithConfig(RateLimiterMemoryStoreConfig{Rate: 1, Burst: 3})
-
+		
 		e := echo.New()
-
+		
 		handler := func(c echo.Context) error {
 			return c.String(http.StatusOK, "test")
 		}
-
+		
 		mw := RateLimiterWithConfig(RateLimiterConfig{
 			Store: inMemoryStore,
 		})
-
+		
 		testCases := []struct {
 			id   string
 			code int
@@ -190,17 +190,17 @@ func TestRateLimiterWithConfig_defaultConfig(t *testing.T) {
 			{"127.0.0.1", http.StatusTooManyRequests},
 			{"127.0.0.1", http.StatusTooManyRequests},
 		}
-
+		
 		for _, tc := range testCases {
 			req := httptest.NewRequest(http.MethodGet, "/", nil)
 			req.Header.Add(echo.HeaderXRealIP, tc.id)
-
+			
 			rec := httptest.NewRecorder()
-
+			
 			c := e.NewContext(req, rec)
-
+			
 			_ = mw(handler)(c)
-
+			
 			assert.Equal(t, tc.code, rec.Code)
 		}
 	}
@@ -208,20 +208,20 @@ func TestRateLimiterWithConfig_defaultConfig(t *testing.T) {
 
 func TestRateLimiterWithConfig_skipper(t *testing.T) {
 	e := echo.New()
-
+	
 	var beforeFuncRan bool
 	handler := func(c echo.Context) error {
 		return c.String(http.StatusOK, "test")
 	}
 	var inMemoryStore = NewRateLimiterMemoryStore(5)
-
+	
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Add(echo.HeaderXRealIP, "127.0.0.1")
-
+	
 	rec := httptest.NewRecorder()
-
+	
 	c := e.NewContext(req, rec)
-
+	
 	mw := RateLimiterWithConfig(RateLimiterConfig{
 		Skipper: func(c echo.Context) bool {
 			return true
@@ -234,28 +234,28 @@ func TestRateLimiterWithConfig_skipper(t *testing.T) {
 			return "127.0.0.1", nil
 		},
 	})
-
+	
 	_ = mw(handler)(c)
-
+	
 	assert.Equal(t, false, beforeFuncRan)
 }
 
 func TestRateLimiterWithConfig_skipperNoSkip(t *testing.T) {
 	e := echo.New()
-
+	
 	var beforeFuncRan bool
 	handler := func(c echo.Context) error {
 		return c.String(http.StatusOK, "test")
 	}
 	var inMemoryStore = NewRateLimiterMemoryStore(5)
-
+	
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Add(echo.HeaderXRealIP, "127.0.0.1")
-
+	
 	rec := httptest.NewRecorder()
-
+	
 	c := e.NewContext(req, rec)
-
+	
 	mw := RateLimiterWithConfig(RateLimiterConfig{
 		Skipper: func(c echo.Context) bool {
 			return false
@@ -268,29 +268,29 @@ func TestRateLimiterWithConfig_skipperNoSkip(t *testing.T) {
 			return "127.0.0.1", nil
 		},
 	})
-
+	
 	_ = mw(handler)(c)
-
+	
 	assert.Equal(t, true, beforeFuncRan)
 }
 
 func TestRateLimiterWithConfig_beforeFunc(t *testing.T) {
 	e := echo.New()
-
+	
 	handler := func(c echo.Context) error {
 		return c.String(http.StatusOK, "test")
 	}
-
+	
 	var beforeRan bool
 	var inMemoryStore = NewRateLimiterMemoryStoreWithConfig(RateLimiterMemoryStoreConfig{Rate: 1, Burst: 3})
-
+	
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Add(echo.HeaderXRealIP, "127.0.0.1")
-
+	
 	rec := httptest.NewRecorder()
-
+	
 	c := e.NewContext(req, rec)
-
+	
 	mw := RateLimiterWithConfig(RateLimiterConfig{
 		BeforeFunc: func(c echo.Context) {
 			beforeRan = true
@@ -300,9 +300,9 @@ func TestRateLimiterWithConfig_beforeFunc(t *testing.T) {
 			return "127.0.0.1", nil
 		},
 	})
-
+	
 	_ = mw(handler)(c)
-
+	
 	assert.Equal(t, true, beforeRan)
 }
 
@@ -337,7 +337,7 @@ func TestRateLimiterMemoryStore_Allow(t *testing.T) {
 		{"127.0.0.1", false}, // 4840 ms no burst
 		{"127.0.0.1", true},  // 5060 ms no burst
 	}
-
+	
 	for i, tc := range testCases {
 		t.Logf("Running testcase #%d => %v", i, time.Duration(i)*220*time.Millisecond)
 		now = func() time.Time {
@@ -370,21 +370,21 @@ func TestRateLimiterMemoryStore_cleanupStaleVisitors(t *testing.T) {
 			lastSeen: now().Add(-10 * time.Minute),
 		},
 	}
-
+	
 	inMemoryStore.Allow("D")
 	inMemoryStore.cleanupStaleVisitors()
-
+	
 	var exists bool
-
+	
 	_, exists = inMemoryStore.visitors["A"]
 	assert.Equal(t, true, exists)
-
+	
 	_, exists = inMemoryStore.visitors["B"]
 	assert.Equal(t, true, exists)
-
+	
 	_, exists = inMemoryStore.visitors["C"]
 	assert.Equal(t, false, exists)
-
+	
 	_, exists = inMemoryStore.visitors["D"]
 	assert.Equal(t, true, exists)
 }
@@ -401,7 +401,7 @@ func TestNewRateLimiterMemoryStore(t *testing.T) {
 		{1, 5, 10 * time.Minute, 10 * time.Minute},
 		{3, 7, 0, 3 * time.Minute},
 	}
-
+	
 	for _, tc := range testCases {
 		store := NewRateLimiterMemoryStoreWithConfig(RateLimiterMemoryStoreConfig{Rate: tc.rate, Burst: tc.burst, ExpiresIn: tc.expiresIn})
 		assert.Equal(t, tc.rate, store.rate)

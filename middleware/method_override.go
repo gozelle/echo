@@ -2,8 +2,8 @@ package middleware
 
 import (
 	"net/http"
-
-	"github.com/labstack/echo/v4"
+	
+	"github.com/echo"
 )
 
 type (
@@ -11,12 +11,12 @@ type (
 	MethodOverrideConfig struct {
 		// Skipper defines a function to skip middleware.
 		Skipper Skipper
-
+		
 		// Getter is a function that gets overridden method from the request.
 		// Optional. Default values MethodFromHeader(echo.HeaderXHTTPMethodOverride).
 		Getter MethodOverrideGetter
 	}
-
+	
 	// MethodOverrideGetter is a function that gets overridden method from the request
 	MethodOverrideGetter func(echo.Context) string
 )
@@ -48,13 +48,13 @@ func MethodOverrideWithConfig(config MethodOverrideConfig) echo.MiddlewareFunc {
 	if config.Getter == nil {
 		config.Getter = DefaultMethodOverrideConfig.Getter
 	}
-
+	
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			if config.Skipper(c) {
 				return next(c)
 			}
-
+			
 			req := c.Request()
 			if req.Method == http.MethodPost {
 				m := config.Getter(c)

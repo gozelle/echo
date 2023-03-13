@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 	"net/http"
-
-	"github.com/labstack/echo/v4"
+	
+	"github.com/echo"
 )
 
 type (
@@ -14,16 +14,16 @@ type (
 	BasicAuthConfig struct {
 		// Skipper defines a function to skip middleware.
 		Skipper Skipper
-
+		
 		// Validator is a function to validate BasicAuth credentials.
 		// Required.
 		Validator BasicAuthValidator
-
+		
 		// Realm is a string to define realm attribute of BasicAuth.
 		// Default value "Restricted".
 		Realm string
 	}
-
+	
 	// BasicAuthValidator defines a function to validate BasicAuth credentials.
 	BasicAuthValidator func(string, string, echo.Context) (bool, error)
 )
@@ -64,16 +64,16 @@ func BasicAuthWithConfig(config BasicAuthConfig) echo.MiddlewareFunc {
 	if config.Realm == "" {
 		config.Realm = defaultRealm
 	}
-
+	
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			if config.Skipper(c) {
 				return next(c)
 			}
-
+			
 			auth := c.Request().Header.Get(echo.HeaderAuthorization)
 			l := len(basic)
-
+			
 			if len(auth) > l+1 && strings.EqualFold(auth[:l], basic) {
 				// Invalid base64 shouldn't be treated as error
 				// instead should be treated as invalid client input
@@ -81,7 +81,7 @@ func BasicAuthWithConfig(config BasicAuthConfig) echo.MiddlewareFunc {
 				if err != nil {
 					return echo.NewHTTPError(http.StatusBadRequest).SetInternal(err)
 				}
-
+				
 				cred := string(b)
 				for i := 0; i < len(cred); i++ {
 					if cred[i] == ':' {
@@ -96,12 +96,12 @@ func BasicAuthWithConfig(config BasicAuthConfig) echo.MiddlewareFunc {
 					}
 				}
 			}
-
+			
 			realm := defaultRealm
 			if config.Realm != defaultRealm {
 				realm = strconv.Quote(config.Realm)
 			}
-
+			
 			// Need to return `401` for browsers to pop-up login box.
 			c.Response().Header().Set(echo.HeaderWWWAuthenticate, basic+" realm="+realm)
 			return echo.ErrUnauthorized

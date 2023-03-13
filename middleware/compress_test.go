@@ -8,8 +8,8 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
-
-	"github.com/labstack/echo/v4"
+	
+	"github.com/echo"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -18,16 +18,16 @@ func TestGzip(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
-
+	
 	// Skip if no Accept-Encoding header
 	h := Gzip()(func(c echo.Context) error {
 		c.Response().Write([]byte("test")) // For Content-Type sniffing
 		return nil
 	})
 	h(c)
-
+	
 	assert.Equal(t, "test", rec.Body.String())
-
+	
 	// Gzip
 	req = httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Set(echo.HeaderAcceptEncoding, gzipScheme)
@@ -43,45 +43,45 @@ func TestGzip(t *testing.T) {
 		buf.ReadFrom(r)
 		assert.Equal(t, "test", buf.String())
 	}
-
+	
 	chunkBuf := make([]byte, 5)
-
+	
 	// Gzip chunked
 	req = httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Set(echo.HeaderAcceptEncoding, gzipScheme)
 	rec = httptest.NewRecorder()
-
+	
 	c = e.NewContext(req, rec)
 	Gzip()(func(c echo.Context) error {
 		c.Response().Header().Set("Content-Type", "text/event-stream")
 		c.Response().Header().Set("Transfer-Encoding", "chunked")
-
+		
 		// Write and flush the first part of the data
 		c.Response().Write([]byte("test\n"))
 		c.Response().Flush()
-
+		
 		// Read the first part of the data
 		assert.True(t, rec.Flushed)
 		assert.Equal(t, gzipScheme, rec.Header().Get(echo.HeaderContentEncoding))
 		r.Reset(rec.Body)
-
+		
 		_, err = io.ReadFull(r, chunkBuf)
 		assert.NoError(t, err)
 		assert.Equal(t, "test\n", string(chunkBuf))
-
+		
 		// Write and flush the second part of the data
 		c.Response().Write([]byte("test\n"))
 		c.Response().Flush()
-
+		
 		_, err = io.ReadFull(r, chunkBuf)
 		assert.NoError(t, err)
 		assert.Equal(t, "test\n", string(chunkBuf))
-
+		
 		// Write the final part of the data and return
 		c.Response().Write([]byte("test"))
 		return nil
 	})(c)
-
+	
 	buf := new(bytes.Buffer)
 	defer r.Close()
 	buf.ReadFrom(r)
@@ -184,18 +184,18 @@ func TestGzipWithStatic(t *testing.T) {
 
 func BenchmarkGzip(b *testing.B) {
 	e := echo.New()
-
+	
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Set(echo.HeaderAcceptEncoding, gzipScheme)
-
+	
 	h := Gzip()(func(c echo.Context) error {
 		c.Response().Write([]byte("test")) // For Content-Type sniffing
 		return nil
 	})
-
+	
 	b.ReportAllocs()
 	b.ResetTimer()
-
+	
 	for i := 0; i < b.N; i++ {
 		// Gzip
 		rec := httptest.NewRecorder()

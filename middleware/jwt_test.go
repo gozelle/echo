@@ -11,9 +11,9 @@ import (
 	"net/url"
 	"strings"
 	"testing"
-
+	
 	"github.com/golang-jwt/jwt"
-	"github.com/labstack/echo/v4"
+	"github.com/echo"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -31,20 +31,20 @@ type jwtCustomClaims struct {
 
 func TestJWT(t *testing.T) {
 	e := echo.New()
-
+	
 	e.GET("/", func(c echo.Context) error {
 		token := c.Get("user").(*jwt.Token)
 		return c.JSON(http.StatusOK, token.Claims)
 	})
-
+	
 	e.Use(JWT([]byte("secret")))
-
+	
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Set(echo.HeaderAuthorization, "bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ")
 	res := httptest.NewRecorder()
-
+	
 	e.ServeHTTP(res, req)
-
+	
 	assert.Equal(t, http.StatusOK, res.Code)
 	assert.Equal(t, `{"admin":true,"name":"John Doe","sub":"1234567890"}`+"\n", res.Body.String())
 }
@@ -57,12 +57,12 @@ func TestJWTRace(t *testing.T) {
 	initialToken := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ"
 	raceToken := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IlJhY2UgQ29uZGl0aW9uIiwiYWRtaW4iOmZhbHNlfQ.Xzkx9mcgGqYMTkuxSCbJ67lsDyk5J2aB7hu65cEE-Ss"
 	validKey := []byte("secret")
-
+	
 	h := JWTWithConfig(JWTConfig{
 		Claims:     &jwtCustomClaims{},
 		SigningKey: validKey,
 	})(handler)
-
+	
 	makeReq := func(token string) echo.Context {
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		res := httptest.NewRecorder()
@@ -71,12 +71,12 @@ func TestJWTRace(t *testing.T) {
 		assert.NoError(t, h(c))
 		return c
 	}
-
+	
 	c := makeReq(initialToken)
 	user := c.Get("user").(*jwt.Token)
 	claims := user.Claims.(*jwtCustomClaims)
 	assert.Equal(t, claims.Name, "John Doe")
-
+	
 	makeReq(raceToken)
 	user = c.Get("user").(*jwt.Token)
 	claims = user.Claims.(*jwtCustomClaims)
@@ -93,7 +93,7 @@ func TestJWTConfig(t *testing.T) {
 	validKey := []byte("secret")
 	invalidKey := []byte("invalid-key")
 	validAuth := DefaultJWTConfig.AuthScheme + " " + token
-
+	
 	testCases := []struct {
 		name       string
 		expPanic   bool
@@ -293,7 +293,7 @@ func TestJWTConfig(t *testing.T) {
 			if tc.reqURL == "" {
 				tc.reqURL = "/"
 			}
-
+			
 			var req *http.Request
 			if len(tc.formValues) > 0 {
 				form := url.Values{}
@@ -310,26 +310,26 @@ func TestJWTConfig(t *testing.T) {
 			req.Header.Set(echo.HeaderAuthorization, tc.hdrAuth)
 			req.Header.Set(echo.HeaderCookie, tc.hdrCookie)
 			c := e.NewContext(req, res)
-
+			
 			if tc.reqURL == "/"+token {
 				c.SetParamNames("jwt")
 				c.SetParamValues(token)
 			}
-
+			
 			if tc.expPanic {
 				assert.Panics(t, func() {
 					JWTWithConfig(tc.config)
 				}, tc.name)
 				return
 			}
-
+			
 			if tc.expErrCode != 0 {
 				h := JWTWithConfig(tc.config)(handler)
 				he := h(c).(*echo.HTTPError)
 				assert.Equal(t, tc.expErrCode, he.Code, tc.name)
 				return
 			}
-
+			
 			h := JWTWithConfig(tc.config)(handler)
 			if assert.NoError(t, h(c), tc.name) {
 				user := c.Get("user").(*jwt.Token)
@@ -360,7 +360,7 @@ func TestJWTwithKID(t *testing.T) {
 	invalidKeys := map[string]interface{}{"thirdOne": []byte("third_secret")}
 	staticSecret := []byte("static_secret")
 	invalidStaticSecret := []byte("invalid_secret")
-
+	
 	for _, tc := range []struct {
 		expErrCode int // 0 for Success
 		config     JWTConfig
@@ -411,14 +411,14 @@ func TestJWTwithKID(t *testing.T) {
 		res := httptest.NewRecorder()
 		req.Header.Set(echo.HeaderAuthorization, tc.hdrAuth)
 		c := e.NewContext(req, res)
-
+		
 		if tc.expErrCode != 0 {
 			h := JWTWithConfig(tc.config)(handler)
 			he := h(c).(*echo.HTTPError)
 			assert.Equal(t, tc.expErrCode, he.Code, tc.info)
 			continue
 		}
-
+		
 		h := JWTWithConfig(tc.config)(handler)
 		if assert.NoError(t, h(c), tc.info) {
 			user := c.Get("user").(*jwt.Token)
@@ -437,24 +437,24 @@ func TestJWTwithKID(t *testing.T) {
 
 func TestJWTConfig_skipper(t *testing.T) {
 	e := echo.New()
-
+	
 	e.Use(JWTWithConfig(JWTConfig{
 		Skipper: func(context echo.Context) bool {
 			return true // skip everything
 		},
 		SigningKey: []byte("secret"),
 	}))
-
+	
 	isCalled := false
 	e.GET("/", func(c echo.Context) error {
 		isCalled = true
 		return c.String(http.StatusTeapot, "test")
 	})
-
+	
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	res := httptest.NewRecorder()
 	e.ServeHTTP(res, req)
-
+	
 	assert.Equal(t, http.StatusTeapot, res.Code)
 	assert.True(t, isCalled)
 }
@@ -464,7 +464,7 @@ func TestJWTConfig_BeforeFunc(t *testing.T) {
 	e.GET("/", func(c echo.Context) error {
 		return c.String(http.StatusTeapot, "test")
 	})
-
+	
 	isCalled := false
 	e.Use(JWTWithConfig(JWTConfig{
 		BeforeFunc: func(context echo.Context) {
@@ -472,12 +472,12 @@ func TestJWTConfig_BeforeFunc(t *testing.T) {
 		},
 		SigningKey: []byte("secret"),
 	}))
-
+	
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Set(echo.HeaderAuthorization, DefaultJWTConfig.AuthScheme+" eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ")
 	res := httptest.NewRecorder()
 	e.ServeHTTP(res, req)
-
+	
 	assert.Equal(t, http.StatusTeapot, res.Code)
 	assert.True(t, isCalled)
 }
@@ -509,20 +509,20 @@ func TestJWTConfig_extractorErrorHandling(t *testing.T) {
 			expectStatusCode: http.StatusTeapot,
 		},
 	}
-
+	
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			e := echo.New()
 			e.GET("/", func(c echo.Context) error {
 				return c.String(http.StatusNotImplemented, "should not end up here")
 			})
-
+			
 			e.Use(JWTWithConfig(tc.given))
-
+			
 			req := httptest.NewRequest(http.MethodGet, "/", nil)
 			res := httptest.NewRecorder()
 			e.ServeHTTP(res, req)
-
+			
 			assert.Equal(t, tc.expectStatusCode, res.Code)
 		})
 	}
@@ -555,7 +555,7 @@ func TestJWTConfig_parseTokenErrorHandling(t *testing.T) {
 			expectErr: "{\"message\":\"ErrorHandlerWithContext: parsing failed\"}\n",
 		},
 	}
-
+	
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			e := echo.New()
@@ -563,7 +563,7 @@ func TestJWTConfig_parseTokenErrorHandling(t *testing.T) {
 			e.GET("/", func(c echo.Context) error {
 				return c.String(http.StatusNotImplemented, "should not end up here")
 			})
-
+			
 			config := tc.given
 			parseTokenCalled := false
 			config.ParseTokenFunc = func(auth string, c echo.Context) (interface{}, error) {
@@ -571,13 +571,13 @@ func TestJWTConfig_parseTokenErrorHandling(t *testing.T) {
 				return nil, errors.New("parsing failed")
 			}
 			e.Use(JWTWithConfig(config))
-
+			
 			req := httptest.NewRequest(http.MethodGet, "/", nil)
 			req.Header.Set(echo.HeaderAuthorization, DefaultJWTConfig.AuthScheme+" eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ")
 			res := httptest.NewRecorder()
-
+			
 			e.ServeHTTP(res, req)
-
+			
 			assert.Equal(t, http.StatusTeapot, res.Code)
 			assert.Equal(t, tc.expectErr, res.Body.String())
 			assert.True(t, parseTokenCalled)
@@ -590,11 +590,11 @@ func TestJWTConfig_custom_ParseTokenFunc_Keyfunc(t *testing.T) {
 	e.GET("/", func(c echo.Context) error {
 		return c.String(http.StatusTeapot, "test")
 	})
-
+	
 	// example of minimal custom ParseTokenFunc implementation. Allows you to use different versions of `github.com/golang-jwt/jwt`
 	// with current JWT middleware
 	signingKey := []byte("secret")
-
+	
 	config := JWTConfig{
 		ParseTokenFunc: func(auth string, c echo.Context) (interface{}, error) {
 			keyFunc := func(t *jwt.Token) (interface{}, error) {
@@ -603,7 +603,7 @@ func TestJWTConfig_custom_ParseTokenFunc_Keyfunc(t *testing.T) {
 				}
 				return signingKey, nil
 			}
-
+			
 			// claims are of type `jwt.MapClaims` when token is created with `jwt.Parse`
 			token, err := jwt.Parse(auth, keyFunc)
 			if err != nil {
@@ -615,25 +615,25 @@ func TestJWTConfig_custom_ParseTokenFunc_Keyfunc(t *testing.T) {
 			return token, nil
 		},
 	}
-
+	
 	e.Use(JWTWithConfig(config))
-
+	
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Set(echo.HeaderAuthorization, DefaultJWTConfig.AuthScheme+" eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ")
 	res := httptest.NewRecorder()
 	e.ServeHTTP(res, req)
-
+	
 	assert.Equal(t, http.StatusTeapot, res.Code)
 }
 
 func TestJWTConfig_TokenLookupFuncs(t *testing.T) {
 	e := echo.New()
-
+	
 	e.GET("/", func(c echo.Context) error {
 		token := c.Get("user").(*jwt.Token)
 		return c.JSON(http.StatusOK, token.Claims)
 	})
-
+	
 	e.Use(JWTWithConfig(JWTConfig{
 		TokenLookupFuncs: []ValuesExtractor{
 			func(c echo.Context) ([]string, error) {
@@ -642,12 +642,12 @@ func TestJWTConfig_TokenLookupFuncs(t *testing.T) {
 		},
 		SigningKey: []byte("secret"),
 	}))
-
+	
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Set("X-API-Key", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ")
 	res := httptest.NewRecorder()
 	e.ServeHTTP(res, req)
-
+	
 	assert.Equal(t, http.StatusOK, res.Code)
 	assert.Equal(t, `{"admin":true,"name":"John Doe","sub":"1234567890"}`+"\n", res.Body.String())
 }
@@ -672,16 +672,16 @@ func TestJWTConfig_SuccessHandler(t *testing.T) {
 			expectStatus: http.StatusUnauthorized,
 		},
 	}
-
+	
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			e := echo.New()
-
+			
 			e.GET("/", func(c echo.Context) error {
 				token := c.Get("user").(*jwt.Token)
 				return c.JSON(http.StatusOK, token.Claims)
 			})
-
+			
 			wasCalled := false
 			e.Use(JWTWithConfig(JWTConfig{
 				SuccessHandler: func(c echo.Context) {
@@ -689,13 +689,13 @@ func TestJWTConfig_SuccessHandler(t *testing.T) {
 				},
 				SigningKey: []byte("secret"),
 			}))
-
+			
 			req := httptest.NewRequest(http.MethodGet, "/", nil)
 			req.Header.Set(echo.HeaderAuthorization, "bearer "+tc.givenToken)
 			res := httptest.NewRecorder()
-
+			
 			e.ServeHTTP(res, req)
-
+			
 			assert.Equal(t, tc.expectCalled, wasCalled)
 			assert.Equal(t, tc.expectStatus, res.Code)
 		})
@@ -740,16 +740,16 @@ func TestJWTConfig_ContinueOnIgnoredError(t *testing.T) {
 			expectBody:                 "{\"message\":\"Unauthorized\"}\n",
 		},
 	}
-
+	
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			e := echo.New()
-
+			
 			e.GET("/", func(c echo.Context) error {
 				testValue, _ := c.Get("test").(string)
 				return c.String(http.StatusTeapot, testValue)
 			})
-
+			
 			e.Use(JWTWithConfig(JWTConfig{
 				ContinueOnIgnoredError: tc.whenContinueOnIgnoredError,
 				SigningKey:             []byte("secret"),
@@ -761,15 +761,15 @@ func TestJWTConfig_ContinueOnIgnoredError(t *testing.T) {
 					return echo.ErrUnauthorized
 				},
 			}))
-
+			
 			req := httptest.NewRequest(http.MethodGet, "/", nil)
 			if tc.givenToken != "" {
 				req.Header.Set(echo.HeaderAuthorization, "bearer "+tc.givenToken)
 			}
 			res := httptest.NewRecorder()
-
+			
 			e.ServeHTTP(res, req)
-
+			
 			assert.Equal(t, tc.expectStatus, res.Code)
 			assert.Equal(t, tc.expectBody, res.Body.String())
 		})

@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	"github.com/labstack/echo/v4"
+	
+	"github.com/echo"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -29,15 +29,15 @@ func TestKeyAuth(t *testing.T) {
 		return c.String(http.StatusOK, "test")
 	}
 	middlewareChain := KeyAuth(testKeyValidator)(handler)
-
+	
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Set(echo.HeaderAuthorization, "Bearer valid-key")
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
-
+	
 	err := middlewareChain(c)
-
+	
 	assert.NoError(t, err)
 	assert.True(t, handlerCalled)
 }
@@ -230,7 +230,7 @@ func TestKeyAuthWithConfig(t *testing.T) {
 			expectError:         "code=401, message=Unauthorized, internal=some user defined error",
 		},
 	}
-
+	
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			handlerCalled := false
@@ -245,7 +245,7 @@ func TestKeyAuthWithConfig(t *testing.T) {
 				tc.whenConfig(&config)
 			}
 			middlewareChain := KeyAuthWithConfig(config)(handler)
-
+			
 			e := echo.New()
 			req := httptest.NewRequest(http.MethodGet, "/", nil)
 			if tc.givenRequestFunc != nil {
@@ -256,9 +256,9 @@ func TestKeyAuthWithConfig(t *testing.T) {
 			}
 			rec := httptest.NewRecorder()
 			c := e.NewContext(req, rec)
-
+			
 			err := middlewareChain(c)
-
+			
 			assert.Equal(t, tc.expectHandlerCalled, handlerCalled)
 			if tc.expectError != "" {
 				assert.EqualError(t, err, tc.expectError)
@@ -338,16 +338,16 @@ func TestKeyAuthWithConfig_ContinueOnIgnoredError(t *testing.T) {
 			expectBody:                 "{\"message\":\"Unauthorized\"}\n",
 		},
 	}
-
+	
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			e := echo.New()
-
+			
 			e.GET("/", func(c echo.Context) error {
 				testValue, _ := c.Get("test").(string)
 				return c.String(http.StatusTeapot, testValue)
 			})
-
+			
 			e.Use(KeyAuthWithConfig(KeyAuthConfig{
 				Validator: testKeyValidator,
 				ErrorHandler: func(err error, c echo.Context) error {
@@ -360,15 +360,15 @@ func TestKeyAuthWithConfig_ContinueOnIgnoredError(t *testing.T) {
 				KeyLookup:              "header:X-API-Key",
 				ContinueOnIgnoredError: tc.whenContinueOnIgnoredError,
 			}))
-
+			
 			req := httptest.NewRequest(http.MethodGet, "/", nil)
 			if tc.givenKey != "" {
 				req.Header.Set("X-API-Key", tc.givenKey)
 			}
 			res := httptest.NewRecorder()
-
+			
 			e.ServeHTTP(res, req)
-
+			
 			assert.Equal(t, tc.expectStatus, res.Code)
 			assert.Equal(t, tc.expectBody, res.Body.String())
 		})

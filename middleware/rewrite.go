@@ -2,8 +2,8 @@ package middleware
 
 import (
 	"regexp"
-
-	"github.com/labstack/echo/v4"
+	
+	"github.com/echo"
 )
 
 type (
@@ -11,7 +11,7 @@ type (
 	RewriteConfig struct {
 		// Skipper defines a function to skip middleware.
 		Skipper Skipper
-
+		
 		// Rules defines the URL path rewrite rules. The values captured in asterisk can be
 		// retrieved by index e.g. $1, $2 and so on.
 		// Example:
@@ -21,7 +21,7 @@ type (
 		// "/users/*/orders/*": "/user/$1/order/$2",
 		// Required.
 		Rules map[string]string `yaml:"rules"`
-
+		
 		// RegexRules defines the URL path rewrite rules using regexp.Rexexp with captures
 		// Every capture group in the values can be retrieved by index e.g. $1, $2 and so on.
 		// Example:
@@ -54,24 +54,24 @@ func RewriteWithConfig(config RewriteConfig) echo.MiddlewareFunc {
 	if config.Rules == nil && config.RegexRules == nil {
 		panic("echo: rewrite middleware requires url path rewrite rules or regex rules")
 	}
-
+	
 	if config.Skipper == nil {
 		config.Skipper = DefaultBodyDumpConfig.Skipper
 	}
-
+	
 	if config.RegexRules == nil {
 		config.RegexRules = make(map[*regexp.Regexp]string)
 	}
 	for k, v := range rewriteRulesRegex(config.Rules) {
 		config.RegexRules[k] = v
 	}
-
+	
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) (err error) {
 			if config.Skipper(c) {
 				return next(c)
 			}
-
+			
 			if err := rewriteURL(config.RegexRules, c.Request()); err != nil {
 				return err
 			}
