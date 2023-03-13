@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 	
-	"github.com/echo"
+	"github.com/gozelle/echo"
 )
 
 type (

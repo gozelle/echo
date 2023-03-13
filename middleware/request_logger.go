@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 	
-	"github.com/echo"
+	"github.com/gozelle/echo"
 )
 
 // Example for `fmt.Printf`

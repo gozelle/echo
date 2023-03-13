@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 	
-	"github.com/echo"
+	"github.com/gozelle/echo"
 )
 
 // TODO: Handle TLS proxy

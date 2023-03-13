@@ -3,7 +3,7 @@ package middleware
 import (
 	"bytes"
 	"fmt"
-	"github.com/echo"
+	"github.com/gozelle/echo"
 	"github.com/stretchr/testify/assert"
 	"mime/multipart"
 	"net/http"

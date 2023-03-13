@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strings"
 	
-	"github.com/echo"
+	"github.com/gozelle/echo"
 )
 
 // RedirectConfig defines the config for Redirect middleware.

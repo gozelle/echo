@@ -3,7 +3,7 @@ package middleware
 import (
 	"strings"
 	
-	"github.com/echo"
+	"github.com/gozelle/echo"
 )
 
 type (

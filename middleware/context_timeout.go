@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 	
-	"github.com/echo"
+	"github.com/gozelle/echo"
 )
 
 // ContextTimeoutConfig defines the config for ContextTimeout middleware.

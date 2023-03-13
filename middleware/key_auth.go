@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"errors"
-	"github.com/echo"
+	"github.com/gozelle/echo"
 	"net/http"
 )
 

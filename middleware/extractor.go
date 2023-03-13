@@ -3,7 +3,7 @@ package middleware
 import (
 	"errors"
 	"fmt"
-	"github.com/echo"
+	"github.com/gozelle/echo"
 	"net/textproto"
 	"strings"
 )

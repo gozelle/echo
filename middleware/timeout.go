@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"context"
-	"github.com/echo"
+	"github.com/gozelle/echo"
 	"net/http"
 	"sync"
 	"time"

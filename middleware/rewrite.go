@@ -3,7 +3,7 @@ package middleware
 import (
 	"regexp"
 	
-	"github.com/echo"
+	"github.com/gozelle/echo"
 )
 
 type (

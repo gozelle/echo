@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"github.com/echo"
+	"github.com/gozelle/echo"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"

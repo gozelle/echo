@@ -6,7 +6,7 @@ import (
 	"strings"
 	"net/http"
 	
-	"github.com/echo"
+	"github.com/gozelle/echo"
 )
 
 type (

@@ -1,4 +1,4 @@
-module github.com/echo
+module github.com/gozelle/echo
 
 go 1.17
 

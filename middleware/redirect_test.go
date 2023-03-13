@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 	
-	"github.com/echo"
+	"github.com/gozelle/echo"
 	"github.com/stretchr/testify/assert"
 )
 

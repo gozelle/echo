@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"sync"
 	
-	"github.com/echo"
+	"github.com/gozelle/echo"
 )
 
 type (

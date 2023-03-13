@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"runtime"
 	
-	"github.com/echo"
+	"github.com/gozelle/echo"
 	"github.com/labstack/gommon/log"
 )
 
@@ -120,7 +120,7 @@ func RecoverWithConfig(config RecoverConfig) echo.MiddlewareFunc {
 						}
 					}
 					
-					if (!config.DisableErrorHandler) {
+					if !config.DisableErrorHandler {
 						c.Error(err)
 					} else {
 						returnErr = err

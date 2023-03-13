@@ -13,7 +13,7 @@ import (
 	"testing"
 	
 	"github.com/golang-jwt/jwt"
-	"github.com/echo"
+	"github.com/gozelle/echo"
 	"github.com/stretchr/testify/assert"
 )
 

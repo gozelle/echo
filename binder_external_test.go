@@ -4,7 +4,7 @@ package echo_test
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/echo"
+	"github.com/gozelle/echo"
 	"log"
 	"net/http"
 	"net/http/httptest"

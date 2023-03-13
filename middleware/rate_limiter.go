@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 	
-	"github.com/echo"
+	"github.com/gozelle/echo"
 	"golang.org/x/time/rate"
 )
 

@@ -3,7 +3,7 @@ package middleware
 import (
 	"net/http"
 	
-	"github.com/echo"
+	"github.com/gozelle/echo"
 )
 
 type (

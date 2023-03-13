@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/golang-jwt/jwt"
-	"github.com/echo"
+	"github.com/gozelle/echo"
 	"net/http"
 	"reflect"
 )
